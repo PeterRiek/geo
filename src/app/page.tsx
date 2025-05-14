@@ -60,7 +60,8 @@ const Home = () => {
             gap: 4,
           }}
         >
-          <Typography variant="h3">GeoGuessr (but free)</Typography>
+          <Typography variant="h1" fontWeight={500}>GeoGuessr (but free)</Typography>
+          <Typography variant="h5">Minimalistic POC</Typography>
           <Button onClick={startRound} size="large" variant="contained">
             Start Round
           </Button>
