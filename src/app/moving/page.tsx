@@ -14,48 +14,18 @@ import Image from "next/image";
 import { useState } from "react";
 import MapIcon from "@mui/icons-material/Map";
 import mapdata from "@/mapdata.json";
+import StreetViewEmbed from "@/components/street-view";
+import StreetViewPano from "@/components/street-view-pano";
 
 const LOADING_IMG =
   "https://upload.wikimedia.org/wikipedia/commons/4/4f/Black_hole_-_Messier_87_crop_max_res.jpg";
-
-const API_URL = "https://maps.googleapis.com/maps/api";
-
-type StreetviewUrlParams = {
-  location: string;
-  fov?: number;
-  heading?: number;
-  pitch?: number;
-  size?: string;
-};
-
-const loadStreetviewUrl = ({
-  location,
-  fov,
-  heading,
-  pitch,
-  size = "400x400",
-}: StreetviewUrlParams) => {
-  const api_key = process.env.NEXT_PUBLIC_MAPS_KEY;
-  const params = [
-    `location=${location}`,
-    fov !== undefined && `fov=${fov}`,
-    heading !== undefined && `heading=${heading}`,
-    pitch !== undefined && `pitch=${pitch}`,
-    `size=${size}`,
-    `key=${api_key}`,
-  ]
-    .filter(Boolean)
-    .join("&");
-
-  return `${API_URL}/streetview?${params}`;
-};
 
 function getRandomElement<T>(array: T[]): T {
   const index = Math.floor(Math.random() * array.length);
   return array[index];
 }
 
-export default function Home() {
+export default function Moving() {
   const [location, setLocation] = useState<string>("");
   const [target, setTarget] = useState<{ lat: number; lng: number }>();
   const [imgUrl, setImgUrl] = useState<string>(LOADING_IMG);
@@ -64,20 +34,13 @@ export default function Home() {
 
   const loadImage = async () => {
     const pos = getRandomElement(mapdata.customCoordinates);
-    setImgUrl(
-      loadStreetviewUrl({
-        location: `${pos.lat},${pos.lng}`,
-        heading: pos.heading,
-        pitch: pos.pitch,
-      })
-    );
     setTarget(pos);
   };
 
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        height: "100vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -85,21 +48,22 @@ export default function Home() {
         gap: 4,
       }}
     >
+      {target && (
+        <StreetViewPano location={target} />
+        // <StreetViewEmbed location={`${target.lat},${target.lng}`} />
+      )}
+
       <Paper sx={{ p: 1 }}>
         <Typography>
           {location.length == 0 ? "No Location Selected" : location}
         </Typography>
-        <Image
-          src={imgUrl ?? LOADING_IMG}
-          alt="location"
-          width={400}
-          height={400}
-        />
       </Paper>
       <Paper>
         <Stack direction="row" gap={1}>
           <Button onClick={loadImage}>Go</Button>
-          <Button onClick={() => setShowTarget(!showTarget)}>Toggle Solution</Button>
+          <Button onClick={() => setShowTarget(!showTarget)}>
+            Toggle Solution
+          </Button>
         </Stack>
       </Paper>
 
@@ -123,6 +87,7 @@ export default function Home() {
             bottom: 10,
             width: 600,
             height: 500,
+            zIndex: 1
           }}
         >
           <Map
