@@ -1,6 +1,5 @@
 import { Loader } from "@googlemaps/js-api-loader";
 import React, { useEffect, useRef } from "react";
-import StarIcon from '@mui/icons-material/Star';
 
 interface MapProps {
   onMapClick?: ({ lat, lng }: { lat: number; lng: number }) => void;

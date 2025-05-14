@@ -1,146 +1,183 @@
 "use client";
 
-import Map from "@/components/map";
-import {
-  Box,
-  Button,
-  IconButton,
-  Paper,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
-import Image from "next/image";
-import { useState } from "react";
+import StreetViewPano from "@/components/street-view-pano";
+import { Box, Button, IconButton, Paper, Typography } from "@mui/material";
+import React, { useState } from "react";
 import MapIcon from "@mui/icons-material/Map";
+
 import mapdata from "@/mapdata.json";
+import Map from "@/components/map";
+import { getDistanceInKm } from "@/lib/geo";
 
-const LOADING_IMG =
-  "https://upload.wikimedia.org/wikipedia/commons/4/4f/Black_hole_-_Messier_87_crop_max_res.jpg";
-
-const API_URL = "https://maps.googleapis.com/maps/api";
-
-type StreetviewUrlParams = {
-  location: string;
-  fov?: number;
-  heading?: number;
-  pitch?: number;
-  size?: string;
-};
-
-const loadStreetviewUrl = ({
-  location,
-  fov,
-  heading,
-  pitch,
-  size = "400x400",
-}: StreetviewUrlParams) => {
-  const api_key = process.env.NEXT_PUBLIC_MAPS_KEY;
-  const params = [
-    `location=${location}`,
-    fov !== undefined && `fov=${fov}`,
-    heading !== undefined && `heading=${heading}`,
-    pitch !== undefined && `pitch=${pitch}`,
-    `size=${size}`,
-    `key=${api_key}`,
-  ]
-    .filter(Boolean)
-    .join("&");
-
-  return `${API_URL}/streetview?${params}`;
-};
+interface Coords {
+  lat: number;
+  lng: number;
+}
 
 function getRandomElement<T>(array: T[]): T {
   const index = Math.floor(Math.random() * array.length);
   return array[index];
 }
 
-export default function Home() {
-  const [location, setLocation] = useState<string>("");
-  const [target, setTarget] = useState<{ lat: number; lng: number }>();
-  const [imgUrl, setImgUrl] = useState<string>(LOADING_IMG);
-  const [showMap, setShowMap] = useState(false);
-  const [showTarget, setShowTarget] = useState(false);
+const Home = () => {
+  const [targetLocation, setTargetLocation] = useState<Coords>();
+  const [guessLocation, setGuessLocation] = useState<Coords>();
+  const [mapVisible, setMapVisible] = useState(false);
+  const [roundFinished, setRoundFinished] = useState(true);
 
-  const loadImage = async () => {
-    const pos = getRandomElement(mapdata.customCoordinates);
-    setImgUrl(
-      loadStreetviewUrl({
-        location: `${pos.lat},${pos.lng}`,
-        heading: pos.heading,
-        pitch: pos.pitch,
-      })
-    );
-    setTarget(pos);
+  const onMapClick = (pos: Coords) => {
+    if (roundFinished) return;
+    setGuessLocation(pos);
   };
 
-  return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 4,
-      }}
-    >
-      <Paper sx={{ p: 1 }}>
-        <Typography>
-          {location.length == 0 ? "No Location Selected" : location}
-        </Typography>
-        <Image
-          src={imgUrl ?? LOADING_IMG}
-          alt="location"
-          width={400}
-          height={400}
-        />
-      </Paper>
-      <Paper>
-        <Stack direction="row" gap={1}>
-          <Button onClick={loadImage}>Go</Button>
-          <Button onClick={() => setShowTarget(!showTarget)}>Toggle Solution</Button>
-        </Stack>
-      </Paper>
+  const onGuess = () => {
+    setRoundFinished(true);
+  };
 
-      {/* MAP SECTION */}
-      {!showMap && (
-        <IconButton
-          sx={{ position: "absolute", right: 10, bottom: 10 }}
-          onClick={() => setShowMap(true)}
-        >
-          <MapIcon />
-        </IconButton>
-      )}
-      {showMap && (
+  const startRound = () => {
+    const pos = getRandomElement(mapdata.customCoordinates);
+    setTargetLocation(pos);
+    setGuessLocation(undefined);
+    setRoundFinished(false);
+    setMapVisible(false);
+  };
+
+  const endRound = () => {
+    setTargetLocation(undefined);
+  };
+
+  if (!targetLocation)
+    return (
+      <>
         <Box
           sx={{
+            width: "100vw",
+            height: "100vh",
             display: "flex",
+            flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <Typography variant="h3">GeoGuessr (but free)</Typography>
+          <Button onClick={startRound} size="large" variant="contained">
+            Start Round
+          </Button>
+        </Box>
+      </>
+    );
+
+  return (
+    <>
+      {/* Streetview Pano View */}
+      <Box sx={{ width: "100vw", height: "100vh" }}>
+        <StreetViewPano location={targetLocation} />
+      </Box>
+
+      {/* Button to open map */}
+      {!mapVisible && (
+        <Box
+          sx={{
             position: "absolute",
             right: 10,
             bottom: 10,
-            width: 600,
-            height: 500,
+            zIndex: 10,
           }}
         >
-          <Map
-            onMapClick={({ lat, lng }) => {
-              console.log(lat, lng);
-              setLocation(`${lat},${lng}`);
-            }}
-            targetPosition={target}
-            showTarget={showTarget}
-          />
-          <IconButton
-            sx={{ position: "absolute", left: 10, top: 10 }}
-            onClick={() => setShowMap(false)}
-          >
-            <MapIcon />
+          <IconButton size="large" onClick={() => setMapVisible(true)}>
+            <MapIcon fontSize="large" />
           </IconButton>
         </Box>
       )}
-    </Box>
+
+      {/* Guessing map */}
+      {mapVisible && (
+        <>
+          {/* Transparent dark bg */}
+          <Box
+            onClick={() => {
+              if (roundFinished) return;
+              setMapVisible(false);
+            }}
+            sx={{
+              position: "absolute",
+              display: "flex",
+              gap: 1,
+              flexDirection: "column",
+              justifyContent: "end",
+              alignItems: "end",
+              top: 0,
+              width: "100vw",
+              height: "100vh",
+              bgcolor: "rgba(0,0,0,0.8)",
+              zIndex: 10,
+              p: 2,
+            }}
+          >
+            {/* Retry */}
+            {roundFinished && (
+              <Paper
+                sx={{
+                  width: "45%",
+                  top: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  gap: 2,
+                  p: 2,
+                  alignItems: "center",
+                }}
+              >
+                {guessLocation && (
+                  <Typography variant="h4">
+                    Your guess was{" "}
+                    {Math.floor(getDistanceInKm(guessLocation, targetLocation))} km away!
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  onClick={endRound}
+                  color="secondary"
+                >
+                  Exit
+                </Button>
+              </Paper>
+            )}
+            <Typography variant="h2">{roundFinished}</Typography>
+            {/* Map container */}
+            <Box
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                width: "45%",
+                height: "50%",
+                borderRadius: 2,
+                overflow: "hidden",
+              }}
+            >
+              <Map
+                targetPosition={targetLocation}
+                onMapClick={onMapClick}
+                allowClicks={!roundFinished}
+                showTarget={roundFinished}
+              />
+            </Box>
+            <Box onClick={(e) => e.stopPropagation()} sx={{ width: "45%" }}>
+              <Button
+                onClick={onGuess}
+                variant="contained"
+                disabled={!guessLocation}
+                loading={roundFinished}
+                fullWidth
+              >
+                GUESS
+              </Button>
+            </Box>
+          </Box>
+        </>
+      )}
+    </>
   );
-}
+};
+
+export default Home;
