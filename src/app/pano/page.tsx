@@ -7,6 +7,7 @@ import MapIcon from "@mui/icons-material/Map";
 
 import mapdata from "@/mapdata.json";
 import Map from "@/components/map";
+import { getDistanceInKm } from "@/lib/geo";
 
 interface Coords {
   lat: number;
@@ -31,7 +32,6 @@ const Pano = () => {
 
   const onGuess = () => {
     setRoundFinished(true);
-    console.log("finished game");
   };
 
   const startRound = () => {
@@ -39,7 +39,7 @@ const Pano = () => {
     setTargetLocation(pos);
     setGuessLocation(undefined);
     setRoundFinished(false);
-    setMapVisible(false)
+    setMapVisible(false);
   };
 
   const endRound = () => {
@@ -129,11 +129,18 @@ const Pano = () => {
                   alignItems: "center",
                 }}
               >
-                <Typography variant="h4">
-                  Your guess was XXX.XXXm away!
-                </Typography>
-                <Button variant="contained" onClick={endRound} color="secondary">
-                  Restart
+                {guessLocation && (
+                  <Typography variant="h4">
+                    Your guess was{" "}
+                    {Math.floor(getDistanceInKm(guessLocation, targetLocation))} km away!
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  onClick={endRound}
+                  color="secondary"
+                >
+                  Exit
                 </Button>
               </Paper>
             )}
