@@ -19,7 +19,7 @@ function getRandomElement<T>(array: T[]): T {
   return array[index];
 }
 
-const Pano = () => {
+const Home = () => {
   const [targetLocation, setTargetLocation] = useState<Coords>();
   const [guessLocation, setGuessLocation] = useState<Coords>();
   const [mapVisible, setMapVisible] = useState(false);
@@ -60,7 +60,8 @@ const Pano = () => {
             gap: 4,
           }}
         >
-          <Typography variant="h3">GeoGuessr (but free)</Typography>
+          <Typography variant="h1" fontWeight={500}>GeoGuessr (but free)</Typography>
+          <Typography variant="h5">Minimalistic POC</Typography>
           <Button onClick={startRound} size="large" variant="contained">
             Start Round
           </Button>
@@ -180,4 +181,4 @@ const Pano = () => {
   );
 };
 
-export default Pano;
+export default Home;
