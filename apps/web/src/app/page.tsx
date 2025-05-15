@@ -57,12 +57,14 @@ const Home = () => {
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
-            gap: 4,
           }}
         >
-          <Typography variant="h1" fontWeight={500}>GeoGuessr (but free)</Typography>
-          <Typography variant="h5">Minimalistic POC</Typography>
-          <Button onClick={startRound} size="large" variant="contained">
+          <Typography variant="h1" fontWeight={500}>
+            GeoGuessr
+          </Typography>
+          <Typography variant="h2" fontWeight={500}>(but free)</Typography>
+          <Typography variant="h5" sx={{mt:2}}>Minimalistic POC</Typography>
+          <Button onClick={startRound} size="large" variant="contained" sx={{mt:4}}>
             Start Round
           </Button>
         </Box>
@@ -75,87 +77,44 @@ const Home = () => {
       <Box sx={{ width: "100vw", height: "100vh" }}>
         <StreetViewPano location={targetLocation} />
       </Box>
-
-      {/* Button to open map */}
-      {!mapVisible && (
+      {/* Game UI */}
+      <Box
+        sx={{
+          width: "100vw",
+          height: "100vh",
+          position: "absolute",
+          top: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "end",
+          alignItems: "end",
+          zIndex: 10,
+          pointerEvents: "none",
+          p: 2,
+        }}
+      >
         <Box
           sx={{
-            position: "absolute",
-            right: 10,
-            bottom: 10,
-            zIndex: 10,
+            width: "15%",
+            minWidth: 250,
+            height: "15%",
+            display: "flex",
+            transition: "width 0.1s ease, height 0.1s ease",
+            ":hover": { width: "60%", height: "60%" },
+            pointerEvents: "auto",
           }}
         >
-          <IconButton size="large" onClick={() => setMapVisible(true)}>
-            <MapIcon fontSize="large" />
-          </IconButton>
-        </Box>
-      )}
-
-      {/* Guessing map */}
-      {mapVisible && (
-        <>
-          {/* Transparent dark bg */}
+          {/* Select Map Container */}
           <Box
-            onClick={() => {
-              if (roundFinished) return;
-              setMapVisible(false);
-            }}
             sx={{
-              position: "absolute",
+              width: "100%",
+              height: "100%",
               display: "flex",
-              gap: 1,
               flexDirection: "column",
-              justifyContent: "end",
-              alignItems: "end",
-              top: 0,
-              width: "100vw",
-              height: "100vh",
-              bgcolor: "rgba(0,0,0,0.8)",
-              zIndex: 10,
-              p: 2,
             }}
           >
-            {/* Retry */}
-            {roundFinished && (
-              <Paper
-                sx={{
-                  width: "45%",
-                  top: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  gap: 2,
-                  p: 2,
-                  alignItems: "center",
-                }}
-              >
-                {guessLocation && (
-                  <Typography variant="h4">
-                    Your guess was{" "}
-                    {Math.floor(getDistanceInKm(guessLocation, targetLocation))} km away!
-                  </Typography>
-                )}
-                <Button
-                  variant="contained"
-                  onClick={endRound}
-                  color="secondary"
-                >
-                  Exit
-                </Button>
-              </Paper>
-            )}
-            <Typography variant="h2">{roundFinished}</Typography>
-            {/* Map container */}
-            <Box
-              onClick={(e) => e.stopPropagation()}
-              sx={{
-                width: "45%",
-                height: "50%",
-                borderRadius: 2,
-                overflow: "hidden",
-              }}
-            >
+            {/* Map fills all available space */}
+            <Box sx={{ flex: 1, overflow: "hidden", borderRadius: 1 }}>
               <Map
                 targetPosition={targetLocation}
                 onMapClick={onMapClick}
@@ -163,20 +122,24 @@ const Home = () => {
                 showTarget={roundFinished}
               />
             </Box>
-            <Box onClick={(e) => e.stopPropagation()} sx={{ width: "45%" }}>
+
+            {/* Button pinned at the bottom */}
+            <Box
+              onClick={(e) => e.stopPropagation()}
+              sx={{ width: "100%", mt: 0.5 }}
+            >
               <Button
                 onClick={onGuess}
                 variant="contained"
                 disabled={!guessLocation}
-                loading={roundFinished}
                 fullWidth
               >
                 GUESS
               </Button>
             </Box>
           </Box>
-        </>
-      )}
+        </Box>
+      </Box>
     </>
   );
 };
