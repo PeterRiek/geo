@@ -79,7 +79,6 @@ const Map: React.FC<MapProps> = ({
     const { AdvancedMarkerElement } = markerLibraryRef.current;
 
     if (showTarget && targetPosition) {
-      console.log("show target")
       if (targetMarkerRef.current) {
         targetMarkerRef.current.position = targetPosition;
         targetMarkerRef.current.map = mapInstanceRef.current;

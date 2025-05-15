@@ -1,9 +1,9 @@
 "use server";
 
 import { auth } from "@/auth";
-import SignInButtonGoogle from "@/components/auth/sing-in-button-google";
 import SignOutButton from "@/components/auth/sing-out-button";
 import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
+import LoginIcon from "@mui/icons-material/Login";
 import {
   Avatar,
   Button,
@@ -43,14 +43,20 @@ const HomePage = async () => {
       {session?.user ? (
         <Paper sx={{ p: 1 }}>
           <Stack>
-            <Button endIcon={<AccountCircleIcon />} href="/profile">Profile</Button>
-            <Button endIcon={<SportsEsportsIcon />} href="/game">Game</Button>
+            <Button endIcon={<AccountCircleIcon />} href="/profile">
+              Profile
+            </Button>
+            <Button endIcon={<SportsEsportsIcon />} href="/game">
+              Game
+            </Button>
             <SignOutButton />
           </Stack>
         </Paper>
       ) : (
         <Paper sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1 }}>
-          <SignInButtonGoogle />
+          <Button endIcon={<LoginIcon />} href="/login">
+            Sign In
+          </Button>
         </Paper>
       )}
     </Container>
