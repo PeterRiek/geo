@@ -1,8 +1,10 @@
 package me.peterrk.pan.backend.controller;
 
-import java.util.Optional;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,17 +16,21 @@ import me.peterrk.pan.backend.repository.UserRepository;
 @RequestMapping("/api/user")
 public class UserController {
 
-  private final UserRepository userRepository;
-
-  public UserController(UserRepository userRepository) {
-    this.userRepository = userRepository;
-  }
+  @Autowired
+  private UserRepository userRepository;
 
   @GetMapping("/me")
-  public User getCurrentUser(Authentication auth) {
-    String email = auth.getName();
-    System.out.println("searching for user: " + email);
-    Optional<User> user = userRepository.findByEmail(email);
-    return user.orElseThrow(() -> new RuntimeException("User not found"));
+  public ResponseEntity<?> getUser() {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+    String username = auth.getName();
+
+    if (username == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+    }
+
+    User user = userRepository.findByUsername(username).get();
+
+    return ResponseEntity.status(HttpStatus.OK).body(user);
   }
 }

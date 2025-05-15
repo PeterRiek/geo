@@ -1,56 +1,63 @@
 package me.peterrk.pan.backend.config;
 
-import java.io.IOException;
-
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import io.jsonwebtoken.ExpiredJwtException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.*;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.*;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import io.jsonwebtoken.Claims;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-  private final JwtUtil jwtUtil;
+  @Autowired
+  private JwtUtil jwtUtil;
 
-  public JwtAuthFilter(JwtUtil jwtUtil) {
-    this.jwtUtil = jwtUtil;
-  }
+  @Autowired
+  private UserDetailsService userDetailsService;
 
   @Override
-  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+  protected void doFilterInternal(HttpServletRequest request,
+      HttpServletResponse response,
+      FilterChain filterChain)
       throws ServletException, IOException {
 
-    final String header = request.getHeader("Authorization");
+    final String authHeader = request.getHeader("Authorization");
+    String username = null;
+    String jwt = null;
 
-    if (header == null || !header.startsWith("Bearer ")) {
-      filterChain.doFilter(request, response);
-      return;
+    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+      jwt = authHeader.substring(7);
+      logger.error(jwt, null);
+
+      try {
+        username = jwtUtil.extractUsername(jwt);
+      } catch (ExpiredJwtException e) {
+        logger.warn("JWT token expired");
+      } catch (Exception e) {
+        logger.warn("JWT token invalid");
+      }
     }
 
-    final String token = header.substring(7);
+    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+      UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-    try {
-      Claims claims = jwtUtil.validateToken(token);
-      String email = claims.getSubject();
+      if (jwtUtil.validateToken(jwt, userDetails)) {
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+            userDetails, null, userDetails.getAuthorities());
 
-      var auth = new UsernamePasswordAuthenticationToken(email, null, null);
-
-      auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-      SecurityContextHolder.getContext().setAuthentication(auth);
-    } catch (Exception e) {
-      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
-      return;
+        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authToken);
+      }
     }
 
     filterChain.doFilter(request, response);
   }
-
 }
