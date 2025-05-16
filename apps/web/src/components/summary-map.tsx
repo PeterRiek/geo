@@ -1,3 +1,4 @@
+import { createImageMarker } from "@/lib/maputil";
 import { Coords } from "@/types/geo";
 import { Loader } from "@googlemaps/js-api-loader";
 import React, { useEffect, useRef } from "react";
@@ -51,25 +52,18 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
 
       const { AdvancedMarkerElement } = markerLibraryRef.current;
 
-      // Target Marker with Custom Icon
       targetMarkerRef.current = new AdvancedMarkerElement({
         map,
         position: targetLocation,
-        // content: createImageMarker(
-        //   "/icons/dest.png",
-        //   "target_marker"
-        // ),
-        // content: createCustomMarker("🎯"), // Custom emoji/icon
+        content: createImageMarker("/icons/marker-target.png", "marker-target"),
       });
 
-      // Guess Marker with Custom Icon
       guessMarkerRef.current = new AdvancedMarkerElement({
         map,
         position: guessLocation,
-        // content: createCustomMarker("📍"),
+        content: createImageMarker("/icons/marker-guess.png", "marker-guess"),
       });
 
-      // Draw a line between guess and target
       lineRef.current = new google.maps.Polyline({
         path: [guessLocation, targetLocation],
         strokeColor: "#121212",
@@ -82,24 +76,6 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
 
     initMap();
   }, [center, zoom, guessLocation, targetLocation]);
-
-  // const createCustomMarker = (icon: string): HTMLElement => {
-  //   const markerDiv = document.createElement("div");
-  //   markerDiv.style.fontSize = "24px";
-  //   markerDiv.style.lineHeight = "1";
-  //   markerDiv.textContent = icon;
-  //   return markerDiv;
-  // };
-
-  // const createImageMarker = (src: string, alt: string): HTMLElement => {
-  //   const img = document.createElement("img");
-  //   img.src = src;
-  //   img.alt = alt;
-  //   img.style.width = "32px";
-  //   img.style.height = "32px";
-  //   // img.style.transform = "translate(-50%, -100%)"; // Center bottom point
-  //   return img;
-  // };
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
 };

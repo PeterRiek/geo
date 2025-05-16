@@ -1,3 +1,4 @@
+import { createImageMarker } from "@/lib/maputil";
 import { Coords } from "@/types/geo";
 import { Loader } from "@googlemaps/js-api-loader";
 import React, { useEffect, useRef } from "react";
@@ -32,7 +33,7 @@ const Map: React.FC<MapProps> = ({
     useRef<google.maps.marker.AdvancedMarkerElement>(null);
   const markerLibraryRef = useRef<google.maps.MarkerLibrary>(null);
 
-  const setMarker = (position: Coords) => {
+  const setClickMarker = (position: Coords) => {
     if (!mapInstanceRef.current || !markerLibraryRef.current) return;
 
     const { AdvancedMarkerElement } = markerLibraryRef.current;
@@ -44,6 +45,7 @@ const Map: React.FC<MapProps> = ({
       clickMarkerRef.current = new AdvancedMarkerElement({
         map: mapInstanceRef.current,
         position: position,
+        content: createImageMarker("icons/marker-guess.png", "marker-guess"),
       });
     }
   };
@@ -73,7 +75,7 @@ const Map: React.FC<MapProps> = ({
       const map = new Map(mapRef.current as HTMLDivElement, mapOptions);
       mapInstanceRef.current = map;
 
-      if (guessLocation) setMarker(guessLocation);
+      if (guessLocation) setClickMarker(guessLocation);
 
       map.addListener("click", (e: google.maps.MapMouseEvent) => {
         if (mapClicksDisabled) return;
@@ -83,7 +85,7 @@ const Map: React.FC<MapProps> = ({
             lng: e.latLng.lng(),
           };
           onMapClick?.(position);
-          setMarker(position);
+          setClickMarker(position);
         }
       });
 
@@ -111,7 +113,7 @@ const Map: React.FC<MapProps> = ({
   useEffect(() => {
     if (!mapInstanceRef.current || !markerLibraryRef.current || !guessLocation)
       return;
-    setMarker(guessLocation);
+    setClickMarker(guessLocation);
   }, [guessLocation]);
 
   // Handle showTarget updates
@@ -128,7 +130,10 @@ const Map: React.FC<MapProps> = ({
         targetMarkerRef.current = new AdvancedMarkerElement({
           map: mapInstanceRef.current,
           position: targetLocation,
-          content: null,
+          content: createImageMarker(
+            "/icons/marker-target.png",
+            "marker-target"
+          ),
         });
       }
     } else if (targetMarkerRef.current) {
