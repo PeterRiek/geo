@@ -106,15 +106,7 @@ const Map: React.FC<MapProps> = ({
     };
 
     initMap();
-  }, [
-    center,
-    guessLocation,
-    mapClicksDisabled,
-    onCenterChange,
-    onMapClick,
-    onZoomChange,
-    zoom,
-  ]);
+  }, []);
 
   useEffect(() => {
     if (!mapInstanceRef.current || !markerLibraryRef.current || !guessLocation)
