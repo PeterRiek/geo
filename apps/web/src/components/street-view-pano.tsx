@@ -30,6 +30,7 @@ const StreetViewPano = ({
           showRoadLabels: false,
           panControl: false,
           clickToGo: false,
+          motionTrackingControl: false
         }
       );
 
