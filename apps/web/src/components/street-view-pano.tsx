@@ -30,7 +30,8 @@ const StreetViewPano = ({
           showRoadLabels: false,
           panControl: false,
           clickToGo: false,
-          motionTrackingControl: false
+          motionTrackingControl: false,
+          motionTracking: false,
         }
       );
 
@@ -64,7 +65,7 @@ const StreetViewPano = ({
           color: "#fff",
           fontSize: "12px",
           fontWeight: "bold",
-          zIndex:20
+          zIndex: 20,
         }}
       >
         ↑
