@@ -1,18 +1,29 @@
+import { Coords } from "@/types/geo";
 import { Loader } from "@googlemaps/js-api-loader";
 import React, { useEffect, useRef } from "react";
 
 interface MapProps {
-  onMapClick?: ({ lat, lng }: { lat: number; lng: number }) => void;
-  allowClicks?: boolean;
-  targetPosition?: { lat: number; lng: number };
-  showTarget?: boolean;
+  onMapClick?: (c: Coords) => void;
+  guessLocation?: Coords;
+  mapClicksDisabled?: boolean;
+  targetLocation?: Coords;
+  targetVisible?: boolean;
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
+  center?: Coords;
+  onCenterChange?: (center: Coords) => void;
 }
 
 const Map: React.FC<MapProps> = ({
   onMapClick,
-  allowClicks,
-  targetPosition,
-  showTarget,
+  guessLocation,
+  mapClicksDisabled,
+  targetLocation,
+  targetVisible,
+  zoom,
+  onZoomChange,
+  center,
+  onCenterChange,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map>(null);
@@ -20,6 +31,22 @@ const Map: React.FC<MapProps> = ({
   const targetMarkerRef =
     useRef<google.maps.marker.AdvancedMarkerElement>(null);
   const markerLibraryRef = useRef<google.maps.MarkerLibrary>(null);
+
+  const setMarker = (position: Coords) => {
+    if (!mapInstanceRef.current || !markerLibraryRef.current) return;
+
+    const { AdvancedMarkerElement } = markerLibraryRef.current;
+
+    if (clickMarkerRef.current) {
+      clickMarkerRef.current.position = position;
+      clickMarkerRef.current.map = mapInstanceRef.current;
+    } else {
+      clickMarkerRef.current = new AdvancedMarkerElement({
+        map: mapInstanceRef.current,
+        position: position,
+      });
+    }
+  };
 
   useEffect(() => {
     const initMap = async () => {
@@ -32,45 +59,68 @@ const Map: React.FC<MapProps> = ({
       markerLibraryRef.current = (await loader.importLibrary(
         "marker"
       )) as google.maps.MarkerLibrary;
-      const { AdvancedMarkerElement } = markerLibraryRef.current;
-
-      const mapCenter = { lat: 0, lng: 0 };
 
       const mapOptions: google.maps.MapOptions = {
-        center: mapCenter,
-        zoom: 2,
+        center: center ?? { lat: 0, lng: 0 },
+        zoom: zoom ?? 1,
         mapId: "GeoGuessr-Clone MAP",
         disableDefaultUI: true,
         gestureHandling: "greedy",
+        clickableIcons: false,
+        draggableCursor: "crosshair",
       };
 
       const map = new Map(mapRef.current as HTMLDivElement, mapOptions);
       mapInstanceRef.current = map;
 
+      if (guessLocation) setMarker(guessLocation);
+
       map.addListener("click", (e: google.maps.MapMouseEvent) => {
-        if (!allowClicks) return;
+        if (mapClicksDisabled) return;
         if (e.latLng) {
           const position = {
             lat: e.latLng.lat(),
             lng: e.latLng.lng(),
           };
-
           onMapClick?.(position);
+          setMarker(position);
+        }
+      });
 
-          if (clickMarkerRef.current) {
-            clickMarkerRef.current.position = position;
-          } else {
-            clickMarkerRef.current = new AdvancedMarkerElement({
-              map,
-              position,
-            });
-          }
+      map.addListener("zoom_changed", () => {
+        const currentZoom = map.getZoom();
+        if (typeof currentZoom === "number") {
+          onZoomChange?.(currentZoom);
+        }
+      });
+
+      map.addListener("center_changed", () => {
+        const currentCenter = map.getCenter();
+        if (currentCenter) {
+          onCenterChange?.({
+            lat: currentCenter.lat(),
+            lng: currentCenter.lng(),
+          });
         }
       });
     };
 
     initMap();
-  }, []);
+  }, [
+    center,
+    guessLocation,
+    mapClicksDisabled,
+    onCenterChange,
+    onMapClick,
+    onZoomChange,
+    zoom,
+  ]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current || !markerLibraryRef.current || !guessLocation)
+      return;
+    setMarker(guessLocation);
+  }, [guessLocation]);
 
   // Handle showTarget updates
   useEffect(() => {
@@ -78,23 +128,22 @@ const Map: React.FC<MapProps> = ({
 
     const { AdvancedMarkerElement } = markerLibraryRef.current;
 
-    if (showTarget && targetPosition) {
-      console.log("show target")
+    if (targetVisible && targetLocation) {
       if (targetMarkerRef.current) {
-        targetMarkerRef.current.position = targetPosition;
+        targetMarkerRef.current.position = targetLocation;
         targetMarkerRef.current.map = mapInstanceRef.current;
       } else {
         targetMarkerRef.current = new AdvancedMarkerElement({
           map: mapInstanceRef.current,
-          position: targetPosition,
-          content:null
+          position: targetLocation,
+          content: null,
         });
       }
     } else if (targetMarkerRef.current) {
       // Remove marker from map
       targetMarkerRef.current.map = null;
     }
-  }, [showTarget, targetPosition]);
+  }, [targetVisible, targetLocation]);
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
 };

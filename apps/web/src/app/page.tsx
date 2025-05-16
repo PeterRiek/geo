@@ -1,29 +1,46 @@
 "use client";
 
 import StreetViewPano from "@/components/street-view-pano";
-import { Box, Button, IconButton, Paper, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  IconButton,
+  Paper,
+  Stack,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import React, { useState } from "react";
-import MapIcon from "@mui/icons-material/Map";
 
 import mapdata from "@/mapdata.json";
-import Map from "@/components/map";
-import { getDistanceInKm } from "@/lib/geo";
-
-interface Coords {
-  lat: number;
-  lng: number;
-}
+import { Coords } from "@/types/geo";
+import GuessrMobileUI from "@/components/guessr-ui-mobile";
+import GuessrUI from "@/components/guessr-ui";
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import SummaryMap from "@/components/summary-map";
+import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
 
 function getRandomElement<T>(array: T[]): T {
   const index = Math.floor(Math.random() * array.length);
   return array[index];
 }
 
+function formatDistance(km: number): string {
+  if (km < 1) {
+    const meters = Math.round(km * 1000);
+    return `${meters} m`;
+  }
+  return `${Math.round(km)} km`;
+}
+
 const Home = () => {
   const [targetLocation, setTargetLocation] = useState<Coords>();
   const [guessLocation, setGuessLocation] = useState<Coords>();
-  const [mapVisible, setMapVisible] = useState(false);
   const [roundFinished, setRoundFinished] = useState(true);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const onMapClick = (pos: Coords) => {
     if (roundFinished) return;
@@ -39,7 +56,6 @@ const Home = () => {
     setTargetLocation(pos);
     setGuessLocation(undefined);
     setRoundFinished(false);
-    setMapVisible(false);
   };
 
   const endRound = () => {
@@ -47,6 +63,54 @@ const Home = () => {
   };
 
   if (!targetLocation)
+    return (
+      <Box
+        sx={{
+          width: "100vw",
+          height: "100vh",
+          px: 2, 
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+        }}
+      >
+        <Typography
+          variant="h1"
+          fontWeight={500}
+          sx={{
+            fontSize: { xs: "2.5rem", sm: "4rem" },
+            wordBreak: "break-word",
+          }}
+        >
+          GeoGuessr
+        </Typography>
+
+        <Typography
+          variant="h2"
+          fontWeight={500}
+          sx={{ fontSize: { xs: "1.8rem", sm: "3rem" } }}
+        >
+          (but free)
+        </Typography>
+
+        <Typography variant="h5" sx={{ mt: 2 }}>
+          Minimalistic POC
+        </Typography>
+
+        <Button
+          onClick={startRound}
+          size="large"
+          variant="contained"
+          sx={{ mt: 4 }}
+        >
+          Start Round
+        </Button>
+      </Box>
+    );
+
+  if (roundFinished && targetLocation && guessLocation)
     return (
       <>
         <Box
@@ -57,16 +121,63 @@ const Home = () => {
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
+            gap: 2,
+            py: 5,
           }}
         >
-          <Typography variant="h1" fontWeight={500}>
-            GeoGuessr
-          </Typography>
-          <Typography variant="h2" fontWeight={500}>(but free)</Typography>
-          <Typography variant="h5" sx={{mt:2}}>Minimalistic POC</Typography>
-          <Button onClick={startRound} size="large" variant="contained" sx={{mt:4}}>
-            Start Round
-          </Button>
+          <Paper
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              p: 1,
+            }}
+          >
+            <Typography variant="h2" fontWeight={500} color="primary">
+              {getGuessrScore(
+                getDistanceInKm(guessLocation, targetLocation),
+                10_000
+              )}
+            </Typography>
+            <Typography>
+              You were{" "}
+              {formatDistance(getDistanceInKm(guessLocation, targetLocation))}{" "}
+              away
+            </Typography>
+          </Paper>
+          <Paper sx={{ width: "90%", height: "70%", p: 1 }}>
+            <Box
+              sx={{
+                overflow: "hidden",
+                borderRadius: 1,
+                width: "100%",
+                height: "100%",
+              }}
+            >
+              <SummaryMap
+                guessLocation={guessLocation}
+                targetLocation={targetLocation}
+                center={getCenterCoords(guessLocation, targetLocation)}
+                zoom={
+                  (getGuessrScore(
+                    getDistanceInKm(guessLocation, targetLocation),
+                    10_000
+                  ) /
+                    5000) *
+                  8
+                }
+              />
+            </Box>
+          </Paper>
+          <Stack direction="column" gap={1}>
+            <Button onClick={startRound} size="large" variant="contained">
+              New Round
+            </Button>
+            <Button onClick={endRound} size="large" variant="contained">
+              Exit
+            </Button>
+          </Stack>
         </Box>
       </>
     );
@@ -77,69 +188,44 @@ const Home = () => {
       <Box sx={{ width: "100vw", height: "100vh" }}>
         <StreetViewPano location={targetLocation} />
       </Box>
-      {/* Game UI */}
-      <Box
-        sx={{
-          width: "100vw",
-          height: "100vh",
-          position: "absolute",
-          top: 0,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "end",
-          alignItems: "end",
-          zIndex: 10,
-          pointerEvents: "none",
-          p: 2,
-        }}
-      >
-        <Box
-          sx={{
-            width: "15%",
-            minWidth: 250,
-            height: "15%",
-            display: "flex",
-            transition: "width 0.1s ease, height 0.1s ease",
-            ":hover": { width: "60%", height: "60%" },
-            pointerEvents: "auto",
-          }}
-        >
-          {/* Select Map Container */}
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {/* Map fills all available space */}
-            <Box sx={{ flex: 1, overflow: "hidden", borderRadius: 1 }}>
-              <Map
-                targetPosition={targetLocation}
-                onMapClick={onMapClick}
-                allowClicks={!roundFinished}
-                showTarget={roundFinished}
-              />
-            </Box>
+      {isMobile ? (
+        <>
+          <GuessrMobileUI
+            targetLocation={targetLocation}
+            targetVisible={roundFinished}
+            guessLocation={guessLocation}
+            guessingDisabled={!guessLocation || roundFinished}
+            onMapClick={onMapClick}
+            onGuess={onGuess}
+          />
+          {/* To Menu */}
 
-            {/* Button pinned at the bottom */}
-            <Box
-              onClick={(e) => e.stopPropagation()}
-              sx={{ width: "100%", mt: 0.5 }}
-            >
-              <Button
-                onClick={onGuess}
-                variant="contained"
-                disabled={!guessLocation}
-                fullWidth
-              >
-                GUESS
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
+          <IconButton
+            sx={{
+              position: "absolute",
+              top: 5,
+              left: 5,
+              zIndex: 20,
+            }}
+            onClick={endRound}
+          >
+            <ArrowBackIosNewIcon />
+          </IconButton>
+        </>
+      ) : (
+        <GuessrUI
+          targetLocation={targetLocation}
+          targetVisible={roundFinished}
+          guessingDisabled={!guessLocation || roundFinished}
+          guessLocation={guessLocation}
+          mapClicksDisabled={roundFinished}
+          onMapClick={onMapClick}
+          onGuess={onGuess}
+          buttonLabel={
+            roundFinished ? "DONE" : guessLocation ? "GUESS" : "PLACE YOUR PIN"
+          }
+        />
+      )}
     </>
   );
 };

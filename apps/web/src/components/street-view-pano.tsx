@@ -1,6 +1,6 @@
 "use client";
 import { Loader } from "@googlemaps/js-api-loader";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const StreetViewPano = ({
   location,
@@ -8,6 +8,7 @@ const StreetViewPano = ({
   location: { lat: number; lng: number };
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [heading, setHeading] = useState(0);
 
   useEffect(() => {
     const loader = new Loader({
@@ -16,7 +17,7 @@ const StreetViewPano = ({
     });
 
     loader.load().then(() => {
-      new google.maps.StreetViewPanorama(
+      const panorama = new google.maps.StreetViewPanorama(
         containerRef.current as HTMLDivElement,
         {
           position: location,
@@ -28,13 +29,47 @@ const StreetViewPano = ({
           disableDefaultUI: true,
           showRoadLabels: false,
           panControl: false,
-          clickToGo: false
+          clickToGo: false,
         }
       );
+
+      panorama.addListener("pov_changed", () => {
+        const pov = panorama.getPov();
+        setHeading(pov.heading);
+      });
     });
   }, [location]);
 
-  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      {/* Panorama container */}
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
+      {/* Compass overlay */}
+      <div
+        style={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          border: "2px solid #fff",
+          backgroundColor: "rgba(0,0,0,0.5)",
+          transform: `rotate(${-heading}deg)`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#fff",
+          fontSize: "12px",
+          fontWeight: "bold",
+          zIndex:20
+        }}
+      >
+        ↑
+      </div>
+    </div>
+  );
 };
 
 export default StreetViewPano;
