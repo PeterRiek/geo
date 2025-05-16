@@ -15,14 +15,14 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
   center,
   zoom,
 }) => {
-  console.log(center, zoom);
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map>(null);
-  const guessMartkerRef =
-    useRef<google.maps.marker.AdvancedMarkerElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const guessMarkerRef =
+    useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const targetMarkerRef =
-    useRef<google.maps.marker.AdvancedMarkerElement>(null);
-  const markerLibraryRef = useRef<google.maps.MarkerLibrary>(null);
+    useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const markerLibraryRef = useRef<google.maps.MarkerLibrary | null>(null);
+  const lineRef = useRef<google.maps.Polyline | null>(null);
 
   useEffect(() => {
     const initMap = async () => {
@@ -51,23 +51,55 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
 
       const { AdvancedMarkerElement } = markerLibraryRef.current;
 
-      // Show Target
+      // Target Marker with Custom Icon
       targetMarkerRef.current = new AdvancedMarkerElement({
-        map: mapInstanceRef.current,
+        map,
         position: targetLocation,
-        content: null,
+        // content: createImageMarker(
+        //   "/icons/dest.png",
+        //   "target_marker"
+        // ),
+        // content: createCustomMarker("🎯"), // Custom emoji/icon
       });
 
-      // Show Guess
-      guessMartkerRef.current = new AdvancedMarkerElement({
-        map: mapInstanceRef.current,
+      // Guess Marker with Custom Icon
+      guessMarkerRef.current = new AdvancedMarkerElement({
+        map,
         position: guessLocation,
-        content: null,
+        // content: createCustomMarker("📍"),
+      });
+
+      // Draw a line between guess and target
+      lineRef.current = new google.maps.Polyline({
+        path: [guessLocation, targetLocation],
+        strokeColor: "#121212",
+        strokeOpacity: 0.5,
+        strokeWeight: 4,
+        map,
+        clickable: false,
       });
     };
 
     initMap();
   }, [center, zoom, guessLocation, targetLocation]);
+
+  // const createCustomMarker = (icon: string): HTMLElement => {
+  //   const markerDiv = document.createElement("div");
+  //   markerDiv.style.fontSize = "24px";
+  //   markerDiv.style.lineHeight = "1";
+  //   markerDiv.textContent = icon;
+  //   return markerDiv;
+  // };
+
+  // const createImageMarker = (src: string, alt: string): HTMLElement => {
+  //   const img = document.createElement("img");
+  //   img.src = src;
+  //   img.alt = alt;
+  //   img.style.width = "32px";
+  //   img.style.height = "32px";
+  //   // img.style.transform = "translate(-50%, -100%)"; // Center bottom point
+  //   return img;
+  // };
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
 };

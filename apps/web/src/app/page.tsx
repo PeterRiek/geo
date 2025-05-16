@@ -66,9 +66,9 @@ const Home = () => {
     return (
       <Box
         sx={{
-          width: "100vw",
-          height: "100vh",
-          px: 2, 
+          width: "100%",
+          height: "100%",
+          px: 2,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -115,8 +115,8 @@ const Home = () => {
       <>
         <Box
           sx={{
-            width: "100vw",
-            height: "100vh",
+            width: "100%",
+            height: "100%",
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
@@ -160,12 +160,13 @@ const Home = () => {
                 targetLocation={targetLocation}
                 center={getCenterCoords(guessLocation, targetLocation)}
                 zoom={
+                  1 +
                   (getGuessrScore(
                     getDistanceInKm(guessLocation, targetLocation),
                     10_000
                   ) /
                     5000) *
-                  8
+                    8
                 }
               />
             </Box>
@@ -185,7 +186,7 @@ const Home = () => {
   return (
     <>
       {/* Streetview Pano View */}
-      <Box sx={{ width: "100vw", height: "100vh" }}>
+      <Box sx={{ width: "100%", height: "100%" }}>
         <StreetViewPano location={targetLocation} />
       </Box>
       {isMobile ? (

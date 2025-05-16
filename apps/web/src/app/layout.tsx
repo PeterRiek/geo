@@ -25,10 +25,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={roboto.variable} suppressHydrationWarning>
-      <body>
+    <html lang="en" className={roboto.variable} suppressHydrationWarning style={{height:"100%"}}>
+      <body style={{height:"100%"}}>
         <InitColorSchemeScript attribute="class" />
-        <AppRouterCacheProvider options={{ key: "css" }}>
+        <AppRouterCacheProvider options={{ key: "css" }} >
           <ThemeProvider theme={theme}>
             <CssBaseline />
 

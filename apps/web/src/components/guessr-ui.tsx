@@ -83,6 +83,14 @@ const GuessrUI: React.FC<{
                 borderRadius: 1,
                 overflow: "hidden",
                 cursor: "crosshair",
+                opacity: 0.5,
+                transition: "opacity 0.1s ease",
+                ":hover": {
+                  opacity: 1,
+                },
+                ".MuiBox-root:hover &": {
+                  opacity: 1,
+                },
               }}
             >
               <Map
