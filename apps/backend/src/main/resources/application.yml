@@ -1,8 +1,11 @@
 spring:
   datasource:
-    url: ${JDBC_DATABASE_URL:jdbc:postgresql://192.168.56.1:5432/postgres}
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost/postgres}
     username: ${JDBC_DATABASE_USERNAME:postgres}
     password: ${JDBC_DATABASE_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
 server:
   port: ${PORT:8080}
 jwt:
