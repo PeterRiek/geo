@@ -25,6 +25,12 @@ const GamePage = () => {
   const [mapVisible, setMapVisible] = useState(false);
   const [roundFinished, setRoundFinished] = useState(true);
 
+  const addSession = async () => {
+    fetch("/api/gamesession", { method: "POST" })
+      .then((r) => r.json())
+      .then((d) => console.log(d));
+  };
+
   const onMapClick = (pos: Coords) => {
     if (roundFinished) return;
     setGuessLocation(pos);
@@ -36,6 +42,9 @@ const GamePage = () => {
 
   const startRound = () => {
     const pos = getRandomElement(mapdata.customCoordinates);
+
+    addSession();
+
     setTargetLocation(pos);
     setGuessLocation(undefined);
     setRoundFinished(false);
@@ -57,7 +66,7 @@ const GamePage = () => {
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
-            textAlign:"center",
+            textAlign: "center",
             gap: 4,
           }}
         >

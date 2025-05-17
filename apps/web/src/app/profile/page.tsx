@@ -1,18 +1,30 @@
 "use client";
 
-import { Container, Stack, Typography } from "@mui/material";
+import { Button, Container, Stack, Typography } from "@mui/material";
 import { getSession } from "next-auth/react";
 import React, { useEffect, useState } from "react";
 
 const ProfilePage = () => {
   const [data, setData] = useState<any>();
+  const [canPlay, setCanPlay] = useState<any>();
+
+  const addSession = async () => {
+    fetch("/api/gamesession", { method: "POST" })
+      .then((r) => r.json())
+      .then((d) => console.log(d));
+  };
 
   useEffect(() => {
     const init = async () => {
-      const resp = await fetch("/api/backend-user");
-      if (!resp.ok) return;
-      const data = await resp.json();
-      setData(data);
+      const resMe = await fetch("/api/user/me");
+      if (!resMe.ok) return;
+      setData(await resMe.json());
+
+      const resCanPlay = await fetch("/api/user/can-play");
+      if (!resCanPlay.ok) return;
+      const d = await resCanPlay.json();
+      console.log(d);
+      setCanPlay(d);
     };
     init();
   }, []);
@@ -30,6 +42,9 @@ const ProfilePage = () => {
       <Stack>
         <Typography variant="h2">ID: {data?.id}</Typography>
         <Typography variant="h2">NI: {data?.username}</Typography>
+        <Typography variant="h2">NI: {canPlay?.gamesPlayedToday}</Typography>
+        <Typography variant="h2">NI: {canPlay?.canPlay.toString()}</Typography>
+        <Button onClick={addSession}>ADD SESSION</Button>
       </Stack>
     </Container>
   );
