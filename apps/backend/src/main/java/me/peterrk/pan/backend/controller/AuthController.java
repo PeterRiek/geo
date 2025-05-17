@@ -41,7 +41,6 @@ public class AuthController {
 
   @PostMapping("/login")
   public ResponseEntity<?> login(@RequestBody AuthRequest request) {
-    System.out.println(request.getPassword());
     try {
       // to trigger bad credentials
       authManager.authenticate(

@@ -3,6 +3,7 @@ package me.peterrk.pan.backend.config;
 import java.security.Key;
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -12,9 +13,12 @@ import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtUtil {
-  private final String SECRET = "todo-add-shared-secret-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-  private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+  private final Key key;
+
+  public JwtUtil(@Value("${jwt.secret}") String secret) {
+    this.key = Keys.hmacShaKeyFor(secret.getBytes());
+  }
 
   public String generateToken(String username) {
     return Jwts.builder()
