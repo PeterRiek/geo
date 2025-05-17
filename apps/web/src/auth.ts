@@ -1,8 +1,6 @@
 import NextAuth, { NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET;
-
 export const authConfig: NextAuthConfig = {
   session: {
     strategy: "jwt",
@@ -50,8 +48,8 @@ export const authConfig: NextAuthConfig = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user.name = token.name;
-        session.accessToken = token.accessToken;
+        session.user.name = token.name!;
+        session.accessToken = token.accessToken as string;
       }
       return session;
     },

@@ -1,7 +1,8 @@
 "use client";
+// TODO: temporary - remove
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Button, Container, Stack, Typography } from "@mui/material";
-import { getSession } from "next-auth/react";
 import React, { useEffect, useState } from "react";
 
 const ProfilePage = () => {
