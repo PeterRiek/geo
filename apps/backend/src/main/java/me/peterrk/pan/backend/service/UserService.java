@@ -27,16 +27,27 @@ public class UserService {
         .orElseThrow(() -> new UsernameNotFoundException("User not found"));
   }
 
+  private boolean hasPermission(User user, String permissionName) {
+    return user.getRoles().stream()
+        .flatMap(role -> role.getPermissions().stream())
+        .anyMatch(permission -> permission.getName().equalsIgnoreCase(permissionName));
+  }
+
   public Map<String, Object> getPlayPermissionStatus(User user) {
     LocalDate today = LocalDate.now();
     LocalDateTime startOfDay = today.atStartOfDay();
     LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
     int playedToday = gameSessionRepository.countTodayByUser(user, startOfDay, startOfNextDay);
 
+    boolean hasUnlimitedPlay = hasPermission(user, "PLAY_UNLIMITED");
+
+    int maxGamesPerDay = hasUnlimitedPlay ? -1 : 5;
+    boolean canPlay = hasUnlimitedPlay || playedToday < maxGamesPerDay;
+
     Map<String, Object> response = new HashMap<>();
-    response.put("canPlay", playedToday < 5);
+    response.put("canPlay", canPlay);
     response.put("gamesPlayedToday", playedToday);
-    response.put("maxGamesPerDay", 5);
+    response.put("maxGamesPerDay", maxGamesPerDay);
 
     return response;
   }
