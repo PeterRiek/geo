@@ -17,6 +17,26 @@ const middleware = async (request: NextRequest) => {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  if (pathname.startsWith("/game")) {
+    try {
+      const res = await fetch(`${process.env.API_URL}/user/can-play`, {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!data.canPlay) {
+        return NextResponse.redirect(new URL("/limit-reached", request.url));
+      }
+    } catch (error) {
+      console.error("Error checking game limit", error);
+      // Optionally block access if the backend is unreachable
+      return NextResponse.redirect(new URL("/error", request.url));
+    }
+  }
+
   return NextResponse.next();
 };
 
