@@ -13,13 +13,11 @@ public class Role {
   private Long id;
 
   @Column(unique = true, nullable = false)
-  private String name; // e.g., "ROLE_ADMIN", "ROLE_USER"
+  private String name;
 
-  // Users with this role (optional bi-directional mapping)
   @ManyToMany(mappedBy = "roles")
   private Set<User> users = new HashSet<>();
 
-  // Permissions assigned to this role
   @ManyToMany(fetch = FetchType.EAGER)
   @JoinTable(name = "role_permissions", joinColumns = @JoinColumn(name = "role_id"), inverseJoinColumns = @JoinColumn(name = "permission_id"))
   private Set<Permission> permissions = new HashSet<>();
@@ -30,8 +28,6 @@ public class Role {
   public Role(String name) {
     this.name = name;
   }
-
-  // Getters and setters
 
   public Long getId() {
     return id;

@@ -13,9 +13,8 @@ public class Permission {
   private Long id;
 
   @Column(unique = true, nullable = false)
-  private String name;  // e.g., "READ_USER", "WRITE_POST"
+  private String name;
 
-  // Roles that have this permission (optional bi-directional mapping)
   @ManyToMany(mappedBy = "permissions")
   private Set<Role> roles = new HashSet<>();
 
@@ -25,8 +24,6 @@ public class Permission {
   public Permission(String name) {
     this.name = name;
   }
-
-  // Getters and setters
 
   public Long getId() {
     return id;

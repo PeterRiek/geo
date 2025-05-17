@@ -5,5 +5,4 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
-public class MethodSecurityConfig {
-}
+public class MethodSecurityConfig {}
