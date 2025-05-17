@@ -21,13 +21,14 @@ export default function ServerStartingPage() {
           clearInterval(interval);
           setServerOnline(true);
         }
-      } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (_) {
         // server is still offline
       } finally {
         // end status check
       }
     }, 3000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -44,12 +45,14 @@ export default function ServerStartingPage() {
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
-        textAlign:"center",
+        textAlign: "center",
         gap: 4,
         p: 4,
       }}
     >
-      <Typography variant="h2" fontWeight={500}>Server is starting up</Typography>
+      <Typography variant="h2" fontWeight={500}>
+        Server is starting up
+      </Typography>
       <Typography variant="h6">
         Please wait a moment while the API server wakes up.
       </Typography>

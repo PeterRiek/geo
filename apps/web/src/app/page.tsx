@@ -6,7 +6,6 @@ import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
 import LoginIcon from "@mui/icons-material/Login";
 import {
   Avatar,
-  Box,
   Button,
   Container,
   Paper,
@@ -14,7 +13,6 @@ import {
   Typography,
 } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import { useEffect, useState } from "react";
 
 const HomePage = async () => {
   const session = await auth();

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { checkServerStatus } from "@/lib/check-server-status";
 
 const protectedRoutes = ["/profile", "/game"];
 
@@ -34,6 +33,7 @@ const middleware = async (request: NextRequest) => {
         return NextResponse.redirect(new URL("/server-starting", request.url));
       }
     } catch (error) {
+      console.error("Error checking game limit", error);
       return NextResponse.redirect(new URL("/server-starting", request.url));
     }
   }
