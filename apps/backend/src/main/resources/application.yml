@@ -1,8 +1,12 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: postgres
-
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost/postgres}
+    username: ${JDBC_DATABASE_USERNAME:postgres}
+    password: ${JDBC_DATABASE_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
 server:
-  port: 5434
+  port: ${PORT:8080}
+jwt:
+  secret: ${JWT_SECRET:ChangeThisJWTSecret!_YourSecretIsNotSafeUntilYouReplaceMe_1234567890abcdef}

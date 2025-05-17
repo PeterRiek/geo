@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/core": "^0.39.1",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -16,7 +17,10 @@
     "@mui/icons-material": "^7.1.0",
     "@mui/material": "^7.1.0",
     "@mui/material-nextjs": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
     "next": "15.3.2",
+    "next-auth": "^5.0.0-beta.28",
+    "next-transpile-modules": "^10.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -24,6 +28,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/google.maps": "^3.58.1",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
