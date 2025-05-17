@@ -16,7 +16,7 @@ export const authConfig: NextAuthConfig = {
       },
       async authorize(credentials) {
         try {
-          const res = await fetch("http://localhost:5434/api/auth/login", {
+          const res = await fetch(`${process.env.API_URL}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
