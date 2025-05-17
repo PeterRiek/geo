@@ -5,7 +5,7 @@ export async function POST() {
   const session = await auth();
 
   try {
-    const backendRes = await fetch(`${process.env.API_URL}/gamesession`, {
+    const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gamesession`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,

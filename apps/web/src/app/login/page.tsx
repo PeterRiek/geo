@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -11,11 +11,11 @@ import {
   Typography,
   Alert,
   Paper,
-} from '@mui/material';
+} from "@mui/material";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -24,18 +24,17 @@ export default function LoginPage() {
     const data = new FormData(form);
 
     setLoading(true);
-    const res = await signIn('credentials', {
-      username: data.get('username'),
-      password: data.get('password'),
+    const res = await signIn("credentials", {
+      username: data.get("username"),
+      password: data.get("password"),
       redirect: false,
     });
 
-    setLoading(false);
-
-    if (res?.ok) {
-      router.push('/');
+    if (res && !res.error) {
+      router.push("/");
     } else {
-      setError('Invalid username or password');
+      setLoading(false);
+      setError("Invalid username or password");
     }
   };
 
@@ -74,10 +73,10 @@ export default function LoginPage() {
             fullWidth
             variant="contained"
             color="primary"
-            sx={{ mt: 3 }}
-            disabled={loading}
+            loading={loading}
+            sx={{ mt: 2 }}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            Login
           </Button>
         </Box>
       </Paper>

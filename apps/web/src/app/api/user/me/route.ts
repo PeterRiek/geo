@@ -5,7 +5,7 @@ export async function GET() {
   const session = await auth();
 
   try {
-    const backendRes = await fetch(`${process.env.API_URL}/user/me`, {
+    const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/me`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,

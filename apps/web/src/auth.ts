@@ -14,16 +14,19 @@ export const authConfig: NextAuthConfig = {
       },
       async authorize(credentials) {
         try {
-          const res = await fetch(`${process.env.API_URL}/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              username: credentials?.username,
-              password: credentials?.password,
-            }),
-          });
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                username: credentials?.username,
+                password: credentials?.password,
+              }),
+            }
+          );
 
-          if (!res.ok) throw new Error("Invalid credentials");
+          if (!res.ok) return null;
 
           const user = await res.json();
 
@@ -57,7 +60,13 @@ export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
   },
+   logger: {
+    error(error: Error) {
+      if (error.message === "CredentialsSignin") return;
+      console.error("[auth][error]", error);
+    }
+  },
   secret: process.env.NEXTAUTH_SECRET,
-}
+};
 
 export const { auth, handlers, signIn, signOut } = NextAuth(authConfig);

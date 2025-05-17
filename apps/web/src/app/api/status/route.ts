@@ -1,18 +1,8 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 
 export async function GET() {
-  const session = await auth();
-
   try {
-    const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/can-play`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
+    const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/status`);
     const data = await backendRes.json();
 
     return NextResponse.json(data, { status: backendRes.status });
