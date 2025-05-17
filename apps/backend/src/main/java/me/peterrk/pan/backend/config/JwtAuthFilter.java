@@ -4,6 +4,8 @@ import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
+import me.peterrk.pan.backend.util.JwtUtil;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,7 +37,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     if (authHeader != null && authHeader.startsWith("Bearer ")) {
       jwt = authHeader.substring(7);
-      
+
       try {
         username = jwtUtil.extractUsername(jwt);
       } catch (ExpiredJwtException e) {

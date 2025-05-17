@@ -1,4 +1,4 @@
-package me.peterrk.pan.backend.model;
+package me.peterrk.pan.backend.dto;
 
 public class AuthResponse {
   private String token;

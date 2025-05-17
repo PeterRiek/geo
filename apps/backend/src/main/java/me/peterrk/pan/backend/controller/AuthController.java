@@ -17,11 +17,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.transaction.Transactional;
-import me.peterrk.pan.backend.config.JwtUtil;
-import me.peterrk.pan.backend.model.AuthRequest;
-import me.peterrk.pan.backend.model.AuthResponse;
+import me.peterrk.pan.backend.dto.AuthRequest;
+import me.peterrk.pan.backend.dto.AuthResponse;
 import me.peterrk.pan.backend.model.User;
 import me.peterrk.pan.backend.repository.UserRepository;
+import me.peterrk.pan.backend.util.JwtUtil;
 
 @RestController
 @RequestMapping("/api/auth")

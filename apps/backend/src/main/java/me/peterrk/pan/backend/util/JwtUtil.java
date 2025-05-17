@@ -1,4 +1,4 @@
-package me.peterrk.pan.backend.config;
+package me.peterrk.pan.backend.util;
 
 import java.security.Key;
 import java.util.Date;
