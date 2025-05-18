@@ -38,6 +38,18 @@ public class JwtUtil {
         .getSubject();
   }
 
+  public boolean validateToken(String token) {
+    try {
+      Jwts.parserBuilder()
+          .setSigningKey(key)
+          .build()
+          .parseClaimsJws(token);
+      return true;
+    } catch (JwtException e) {
+      return false;
+    }
+  }
+
   public boolean validateToken(String token, UserDetails userDetails) throws JwtException {
     return extractUsername(token).equals(userDetails.getUsername());
   }
