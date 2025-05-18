@@ -51,10 +51,12 @@ export default function ServerStartingPage() {
       }}
     >
       <Typography variant="h2" fontWeight={500}>
-        Server is starting up
+        {!serverOnline ? "Server is starting up" : "Server up!"}
       </Typography>
       <Typography variant="h6">
-        Please wait a moment while the API server wakes up.
+        {!serverOnline
+          ? "Please wait a moment while the API server wakes up."
+          : "Server is ready, you can now connect."}
       </Typography>
       <Button
         variant="contained"

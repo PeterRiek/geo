@@ -26,15 +26,26 @@ const middleware = async (request: NextRequest) => {
 
   if (!pathname.startsWith("/server-starting") && !isStaticAsset) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3_000); // 10 seconds
+
       const serverResp = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/status`
+        `${process.env.NEXT_PUBLIC_API_URL}/status`,
+        { signal: controller.signal }
       );
+
+      clearTimeout(timeout);
+
       if (!serverResp.ok) {
         return NextResponse.redirect(new URL("/server-starting", request.url));
       }
     } catch (error) {
-      console.error("Error checking game limit", error);
-      return NextResponse.redirect(new URL("/server-starting", request.url));
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return NextResponse.redirect(new URL("/server-starting", request.url));
+      } else {
+        console.error("Error checking server status", error);
+        return NextResponse.redirect(new URL("/error", request.url));
+      }
     }
   }
 
@@ -56,7 +67,6 @@ const middleware = async (request: NextRequest) => {
       }
     } catch (error) {
       console.error("Error checking game limit", error);
-      // Optionally block access if the backend is unreachable
       return NextResponse.redirect(new URL("/error", request.url));
     }
   }
