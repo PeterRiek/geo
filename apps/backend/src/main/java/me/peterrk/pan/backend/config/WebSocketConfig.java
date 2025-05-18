@@ -2,7 +2,7 @@ package me.peterrk.pan.backend.config;
 
 import me.peterrk.pan.backend.util.JwtUtil;
 import me.peterrk.pan.backend.websocket.JwtHandshakeInterceptor;
-import me.peterrk.pan.backend.websocket.MyWebSocketHandler;
+import me.peterrk.pan.backend.websocket.EchoWebSocketHandler;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +19,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
   @Override
   public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-    registry.addHandler(new MyWebSocketHandler(), "/ws")
+    registry.addHandler(new EchoWebSocketHandler(), "/ws/echo")
         .addInterceptors(new JwtHandshakeInterceptor(jwtUtil))
         .setAllowedOrigins("*");
   }
