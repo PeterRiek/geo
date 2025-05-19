@@ -46,6 +46,8 @@ public class DuelWebSocketHandler extends TextWebSocketHandler {
       case JOIN_ROOM -> {
         // TODO: room full mechanic
         // TODO: incorrect data struct execption handling
+        // TODO: use usernames
+        // TODO: rejoin running duels
 
         JoinRoomMessage joinRoomMessage = mapper.treeToValue(node, JoinRoomMessage.class);
         String roomId = joinRoomMessage.data.roomId;

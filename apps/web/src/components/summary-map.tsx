@@ -5,6 +5,7 @@ import React, { useEffect, useRef } from "react";
 
 interface SummaryMapProps {
   guessLocation: Coords;
+  otherGuesses?: Coords[];
   targetLocation: Coords;
   center?: Coords;
   zoom?: number;
@@ -12,6 +13,7 @@ interface SummaryMapProps {
 
 const SummaryMap: React.FC<SummaryMapProps> = ({
   guessLocation,
+  otherGuesses,
   targetLocation,
   center,
   zoom,
@@ -22,8 +24,12 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
     useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const targetMarkerRef =
     useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const otherMarkerRefs = useRef<google.maps.marker.AdvancedMarkerElement[]>(
+    []
+  );
+
   const markerLibraryRef = useRef<google.maps.MarkerLibrary | null>(null);
-  const lineRef = useRef<google.maps.Polyline | null>(null);
+  const lineRef = useRef<google.maps.Polyline[]>([]);
 
   useEffect(() => {
     const initMap = async () => {
@@ -64,13 +70,40 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
         content: createImageMarker("/icons/marker-guess.png", "marker-guess"),
       });
 
-      lineRef.current = new google.maps.Polyline({
-        path: [guessLocation, targetLocation],
-        strokeColor: "#121212",
-        strokeOpacity: 0.5,
-        strokeWeight: 4,
-        map,
-        clickable: false,
+      lineRef.current = [];
+      lineRef.current.push(
+        new google.maps.Polyline({
+          path: [guessLocation, targetLocation],
+          strokeColor: "#121212",
+          strokeOpacity: 0.5,
+          strokeWeight: 4,
+          map,
+          clickable: false,
+        })
+      );
+
+      otherMarkerRefs.current = [];
+      otherGuesses?.forEach((position) => {
+        otherMarkerRefs.current?.push(
+          new AdvancedMarkerElement({
+            map,
+            position,
+            content: createImageMarker(
+              "/icons/marker-opponent.png",
+              "marker-opponent"
+            ),
+          })
+        );
+        lineRef.current.push(
+          new google.maps.Polyline({
+            path: [position, targetLocation],
+            strokeColor: "#121212",
+            strokeOpacity: 0.5,
+            strokeWeight: 4,
+            map,
+            clickable: false,
+          })
+        );
       });
     };
 

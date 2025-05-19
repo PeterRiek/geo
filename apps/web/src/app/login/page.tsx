@@ -39,8 +39,8 @@ export default function LoginPage() {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ mt: 10, p: 4 }}>
+    <Container maxWidth="sm" sx={{ height: "100%", p: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h5" component="h1" gutterBottom>
           Login
         </Typography>

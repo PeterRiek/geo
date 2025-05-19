@@ -35,3 +35,11 @@ export function getCenterCoords(c1: Coords, c2: Coords) {
 export function getGuessrScore(distance: number, maxDistance: number) {
   return Math.round(5000 * Math.exp(-10 * (distance / maxDistance)));
 }
+
+export function formatDistance(km: number): string {
+  if (km < 1) {
+    const meters = Math.round(km * 1000);
+    return `${meters} m`;
+  }
+  return `${Math.round(km)} km`;
+}

@@ -4,7 +4,7 @@ import java.util.Map;
 
 public class GameResultMessage {
   public static class Data {
-    public Map<String,LatLng> allGuesses;
+    public Map<String, LatLng> allGuesses;
     public String winner;
   }
 
