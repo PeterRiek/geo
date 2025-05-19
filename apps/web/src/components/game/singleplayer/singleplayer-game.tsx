@@ -1,15 +1,7 @@
 "use client";
 
 import { Coords } from "@/types/geo";
-import {
-  Box,
-  CircularProgress,
-  Container,
-  Divider,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import { Box, CircularProgress, useMediaQuery, useTheme } from "@mui/material";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
@@ -60,7 +52,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string }> = ({
   const fetchNextLocation = async () => {
     try {
       setLoadingTargetLocation(true);
-      const res = await fetch(`/api/map/${playSet.mapId}/random`);
+      const res = await fetch(`/api/gamemap/${playSet.mapId}/locations/random`);
       if (!res.ok) throw new Error("Failed to fetch target location");
       const data = await res.json();
       setTargetLocation(data);

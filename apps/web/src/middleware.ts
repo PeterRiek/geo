@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
+import { logout } from "./lib/actions/auth";
 
 const protectedRoutes = ["/profile", "/game"];
 
@@ -16,7 +17,7 @@ const middleware = async (request: NextRequest) => {
   if (isProtected && !session) {
     return NextResponse.redirect(new URL("/", request.url));
   }
-  if (isProtected && session && Date.parse(session.expires) > Date.now()) {
+  if (isProtected && session && Date.parse(session.expires) < Date.now()) {
     return NextResponse.redirect(new URL("/session-expired", request.url));
   }
 
@@ -62,6 +63,7 @@ const middleware = async (request: NextRequest) => {
           },
         }
       );
+      // TODO: check ok
 
       const data = await res.json();
       // TODO: match type with api dto
