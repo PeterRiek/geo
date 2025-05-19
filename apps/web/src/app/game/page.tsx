@@ -15,8 +15,8 @@ import React, { useState } from "react";
 
 import mapdata from "@/mapdata.json";
 import { Coords } from "@/types/geo";
-import GuessrMobileUI from "@/components/guessr-ui-mobile";
-import GuessrUI from "@/components/guessr-ui";
+import GuessrMobileUI from "@/components/guessing-ui-mobile";
+import GuessrUI from "@/components/guessing-ui";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import SummaryMap from "@/components/summary-map";
 import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";

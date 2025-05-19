@@ -57,11 +57,11 @@ public class DuelGameService {
   }
 
   public LatLng getRandomTarget() {
+    // TODO: merge with map api
     var rng = new Random();
     LatLng[] opt = new LatLng[] {
         new LatLng(60.327760220139645, 19.916788229531633),
         new LatLng(50.084753267843695, 14.424322057315528)
-
     };
     return opt[rng.nextInt(opt.length)];
   }

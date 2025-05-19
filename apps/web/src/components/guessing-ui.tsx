@@ -3,7 +3,7 @@
 import { Box, Button, useMediaQuery, useTheme } from "@mui/material";
 import React from "react";
 
-import Map from "@/components/map";
+import Map from "@/components/guessing-map";
 import { Coords } from "@/types/geo";
 
 const GuessrUI: React.FC<{
@@ -111,6 +111,7 @@ const GuessrUI: React.FC<{
                 onClick={onGuess}
                 variant="contained"
                 disabled={guessingDisabled}
+                autoFocus
                 fullWidth
               >
                 {buttonLabel ?? "GUESS"}

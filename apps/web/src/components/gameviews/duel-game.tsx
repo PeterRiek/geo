@@ -16,8 +16,8 @@ import {
 } from "@mui/material";
 import React, { useState } from "react";
 import StreetViewPano from "../street-view-pano";
-import GuessrMobileUI from "../guessr-ui-mobile";
-import GuessrUI from "../guessr-ui";
+import GuessrMobileUI from "../guessing-ui-mobile";
+import GuessrUI from "../guessing-ui";
 import { formatDistance, getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
 import SummaryMap from "../summary-map";
 
