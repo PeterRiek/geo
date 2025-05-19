@@ -1,7 +1,9 @@
 package me.peterrk.pan.backend.config;
 
+import me.peterrk.pan.backend.service.DuelGameService;
 import me.peterrk.pan.backend.util.JwtUtil;
 import me.peterrk.pan.backend.websocket.JwtHandshakeInterceptor;
+import me.peterrk.pan.backend.websocket.DuelWebSocketHandler;
 import me.peterrk.pan.backend.websocket.EchoWebSocketHandler;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,9 +19,16 @@ public class WebSocketConfig implements WebSocketConfigurer {
   @Autowired
   private JwtUtil jwtUtil;
 
+  @Autowired
+  private DuelGameService duelGameService;
+
   @Override
   public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
     registry.addHandler(new EchoWebSocketHandler(), "/ws/echo")
+        .addInterceptors(new JwtHandshakeInterceptor(jwtUtil))
+        .setAllowedOrigins("*");
+
+    registry.addHandler(new DuelWebSocketHandler(duelGameService), "/ws/duel")
         .addInterceptors(new JwtHandshakeInterceptor(jwtUtil))
         .setAllowedOrigins("*");
   }
