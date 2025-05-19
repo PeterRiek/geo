@@ -1,6 +1,6 @@
 "use client";
 
-import StreetViewPano from "@/components/street-view-pano";
+import StreetViewPano from "@/components/game/street-view-pano";
 import {
   Box,
   Button,
@@ -15,10 +15,10 @@ import React, { useState } from "react";
 
 import mapdata from "@/mapdata.json";
 import { Coords } from "@/types/geo";
-import GuessrMobileUI from "@/components/guessr-ui-mobile";
-import GuessrUI from "@/components/guessr-ui";
+import GuessrMobileUI from "@/components/game/guessing-ui-mobile";
+import GuessrUI from "@/components/game/guessing-ui";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import SummaryMap from "@/components/summary-map";
+import SummaryMap from "@/components/game/summary-map";
 import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
 
 function getRandomElement<T>(array: T[]): T {

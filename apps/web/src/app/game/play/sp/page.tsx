@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import SinglePlayerGame from "@/components/game/singleplayer-game";
+import SinglePlayerGame from "@/components/game/singleplayer/singleplayer-game";
 import React from "react";
 
 interface PlaySinglePlayerPageProps {

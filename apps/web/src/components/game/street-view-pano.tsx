@@ -1,11 +1,20 @@
 "use client";
+import { Coords } from "@/types/geo";
 import { Loader } from "@googlemaps/js-api-loader";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
-const StreetViewPano = ({
+interface StreetViewPanoProps {
+  location: Coords;
+  moveEnabled?: boolean;
+  zoomEnabled?: boolean;
+  panEnabled?: boolean;
+}
+
+const StreetViewPano: React.FC<StreetViewPanoProps> = ({
   location,
-}: {
-  location: { lat: number; lng: number };
+  moveEnabled,
+  zoomEnabled,
+  panEnabled,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [heading, setHeading] = useState(0);
@@ -28,8 +37,9 @@ const StreetViewPano = ({
           zoom: 1,
           disableDefaultUI: true,
           showRoadLabels: false,
-          panControl: false,
-          clickToGo: false,
+          clickToGo: moveEnabled ?? true,
+          scrollwheel: zoomEnabled ?? true,
+          disableDoubleClickZoom: zoomEnabled === false,
           motionTrackingControl: false,
           motionTracking: false,
         }
@@ -43,7 +53,8 @@ const StreetViewPano = ({
   }, [location]);
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div style={{ position: "relative", width: "100%", height: "100%", pointerEvents: panEnabled ? "auto":"none" }}>
+      {/* {!panEnabled && <div style={{position:"absolute", width:"100%", height:"100%"}}/>} */}
       {/* Panorama container */}
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 

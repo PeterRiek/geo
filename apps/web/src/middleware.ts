@@ -16,6 +16,9 @@ const middleware = async (request: NextRequest) => {
   if (isProtected && !session) {
     return NextResponse.redirect(new URL("/", request.url));
   }
+  if (isProtected && session && Date.parse(session.expires) > Date.now()) {
+    return NextResponse.redirect(new URL("/session-expired", request.url));
+  }
 
   const isStaticAsset =
     pathname.startsWith("/_next") ||
@@ -27,7 +30,7 @@ const middleware = async (request: NextRequest) => {
   if (!pathname.startsWith("/server-starting") && !isStaticAsset) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3_000); // 10 seconds
+      const timeout = setTimeout(() => controller.abort(), 3_000);
 
       const serverResp = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/status`,
@@ -49,7 +52,7 @@ const middleware = async (request: NextRequest) => {
     }
   }
 
-  if (pathname.startsWith("/game")) {
+  if (pathname.startsWith("/game/play")) {
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/user/can-play`,
@@ -61,6 +64,7 @@ const middleware = async (request: NextRequest) => {
       );
 
       const data = await res.json();
+      // TODO: match type with api dto
 
       if (!data.canPlay) {
         return NextResponse.redirect(new URL("/limit-reached", request.url));

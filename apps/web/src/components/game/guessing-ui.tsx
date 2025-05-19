@@ -3,7 +3,7 @@
 import { Box, Button, useMediaQuery, useTheme } from "@mui/material";
 import React from "react";
 
-import Map from "@/components/guessing-map";
+import Map from "@/components/game/guessing-map";
 import { Coords } from "@/types/geo";
 
 const GuessrUI: React.FC<{

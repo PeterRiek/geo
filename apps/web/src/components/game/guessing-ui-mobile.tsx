@@ -4,7 +4,7 @@ import { Box, Button, IconButton, Paper } from "@mui/material";
 import React, { useRef, useState } from "react";
 import MapIcon from "@mui/icons-material/Map";
 
-import Map from "@/components/guessing-map";
+import Map from "@/components/game/guessing-map";
 import CloseIcon from "@mui/icons-material/Close";
 import { Coords } from "@/types/geo";
 
