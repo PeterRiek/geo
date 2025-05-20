@@ -79,6 +79,7 @@ const Map: React.FC<MapProps> = ({
 
       map.addListener("click", (e: google.maps.MapMouseEvent) => {
         if (mapClicksDisabled) return;
+        console.log("clicked", e, "disabled", mapClicksDisabled);
         if (e.latLng) {
           const position = {
             lat: e.latLng.lat(),
@@ -113,6 +114,7 @@ const Map: React.FC<MapProps> = ({
   useEffect(() => {
     if (!mapInstanceRef.current || !markerLibraryRef.current || !guessLocation)
       return;
+    console.log("update guess location");
     setClickMarker(guessLocation);
   }, [guessLocation]);
 

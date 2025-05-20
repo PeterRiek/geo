@@ -15,4 +15,5 @@ public class RoomState {
 
   public LatLng targetLocation;
   public Map<String, LatLng> allGuesses;
+  public int roundCount;
 }

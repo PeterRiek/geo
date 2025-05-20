@@ -4,6 +4,10 @@ public class ServerMessage {
   public String type;
   public Object payload;
 
+  public ServerMessage(String type) {
+    this.type = type;
+  }
+
   public ServerMessage(String type, Object payload) {
     this.type = type;
     this.payload = payload;

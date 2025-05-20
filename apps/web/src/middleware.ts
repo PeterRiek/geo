@@ -60,7 +60,14 @@ const middleware = async (request: NextRequest) => {
           },
         }
       );
-      // TODO: check ok
+      
+      if (res.status === 401) {
+        const errorData = await res.json();
+        if (errorData.error === "JWT token expired") {
+          return NextResponse.redirect(new URL("/session-expired", request.url));
+        }
+        return NextResponse.redirect(new URL("/error", request.url));
+      }
 
       const data = await res.json();
       // TODO: match type with api dto

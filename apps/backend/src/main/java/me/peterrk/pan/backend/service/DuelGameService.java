@@ -33,13 +33,16 @@ public class DuelGameService {
     roomSessions.computeIfAbsent(roomId, id -> ConcurrentHashMap.newKeySet()).add(session);
 
     return rooms.computeIfAbsent(roomId, id -> {
+      // TODO: user sets room settings
       RoomState room = new RoomState();
       room.roomId = roomId;
       room.roomSettings = new GameSettings();
       room.roomSettings.allowPan = true;
       room.roomSettings.allowZoom = true;
       room.roomSettings.mapId = 1L;
+      room.roomSettings.roundCount = 2;
       room.roomPhase = RoomState.RoomPhase.WAITING;
+      room.roundCount = 0;
       room.allGuesses = new ConcurrentHashMap<>();
       return room;
     });
@@ -56,6 +59,7 @@ public class DuelGameService {
     if (room != null) {
       room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
       room.targetLocation = getRandomTarget(getRoomState(roomId).roomSettings.mapId);
+      room.roundCount++;
       room.allGuesses = new ConcurrentHashMap<>();
     }
     return room;
@@ -66,6 +70,7 @@ public class DuelGameService {
     if (room != null) {
       room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
       room.targetLocation = getRandomTarget(getRoomState(roomId).roomSettings.mapId);
+      room.roundCount++;
       room.allGuesses = new ConcurrentHashMap<>();
     }
     return room;

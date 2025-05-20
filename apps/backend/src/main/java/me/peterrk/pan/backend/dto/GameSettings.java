@@ -5,4 +5,5 @@ public class GameSettings {
   public boolean allowMove;
   public boolean allowZoom;
   public boolean allowPan;
+  public int roundCount;
 }

@@ -26,40 +26,43 @@ const InGameView: React.FC<Props> = ({
   moveEnabled,
   panEnabled,
   zoomEnabled,
-}) => (
-  <>
-    <Box sx={{ width: "100%", height: "100%" }}>
-      <StreetViewPano
-        location={targetLocation}
-        moveEnabled={moveEnabled}
-        panEnabled={panEnabled}
-        zoomEnabled={zoomEnabled}
-      />
-    </Box>
-    {isMobile ? (
-      <GuessrMobileUI
-        targetLocation={targetLocation}
-        targetVisible={roundFinished}
-        guessLocation={guessLocation}
-        guessingDisabled={!guessLocation || roundFinished}
-        onMapClick={onMapClick}
-        onGuess={onGuess}
-      />
-    ) : (
-      <GuessrUI
-        targetLocation={targetLocation}
-        targetVisible={roundFinished}
-        guessingDisabled={!guessLocation || roundFinished}
-        guessLocation={guessLocation}
-        mapClicksDisabled={roundFinished}
-        onMapClick={onMapClick}
-        onGuess={onGuess}
-        buttonLabel={
-          roundFinished ? "DONE" : guessLocation ? "GUESS" : "PLACE YOUR PIN"
-        }
-      />
-    )}
-  </>
-);
+}) => {
+  console.log(roundFinished);
+  return (
+    <>
+      <Box sx={{ width: "100%", height: "100%" }}>
+        <StreetViewPano
+          location={targetLocation}
+          moveEnabled={moveEnabled}
+          panEnabled={panEnabled}
+          zoomEnabled={zoomEnabled}
+        />
+      </Box>
+      {isMobile ? (
+        <GuessrMobileUI
+          targetLocation={targetLocation}
+          targetVisible={roundFinished}
+          guessLocation={guessLocation}
+          guessingDisabled={!guessLocation || roundFinished}
+          onMapClick={onMapClick}
+          onGuess={onGuess}
+        />
+      ) : (
+        <GuessrUI
+          targetLocation={targetLocation}
+          targetVisible={roundFinished}
+          guessingDisabled={!guessLocation || roundFinished}
+          guessLocation={guessLocation}
+          mapClicksDisabled={roundFinished}
+          onMapClick={onMapClick}
+          onGuess={onGuess}
+          buttonLabel={
+            roundFinished ? "DONE" : guessLocation ? "GUESS" : "PLACE YOUR PIN"
+          }
+        />
+      )}
+    </>
+  );
+};
 
 export default InGameView;

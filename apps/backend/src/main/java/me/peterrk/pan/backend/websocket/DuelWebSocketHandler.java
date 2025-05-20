@@ -1,5 +1,7 @@
 package me.peterrk.pan.backend.websocket;
 
+import javax.sql.rowset.serial.SerialException;
+
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -10,6 +12,7 @@ import me.peterrk.pan.backend.dto.ws.ClientMessage;
 import me.peterrk.pan.backend.dto.ws.LatLng;
 import me.peterrk.pan.backend.dto.ws.RoomState;
 import me.peterrk.pan.backend.dto.ws.ServerMessage;
+import me.peterrk.pan.backend.dto.ws.RoomState.RoomPhase;
 import me.peterrk.pan.backend.service.DuelGameService;
 
 public class DuelWebSocketHandler extends TextWebSocketHandler {
@@ -39,22 +42,41 @@ public class DuelWebSocketHandler extends TextWebSocketHandler {
       }
 
       case "GUESS" -> {
+        if (duelGameService.getRoomState(msg.roomId).roomPhase != RoomPhase.ROUND_IN_PROGRESS) {
+          ServerMessage response = new ServerMessage("INVALID_OPERATION");
+          session.sendMessage(new TextMessage(mapper.writeValueAsBytes(response)));
+          return;
+        }
         LatLng guess = mapper.convertValue(msg.payload, LatLng.class);
         duelGameService.submitGuess(msg.roomId, username, guess);
         RoomState updated = duelGameService.getRoomState(msg.roomId);
         if (updated.allGuesses.size() >= 2) {
-          updated.roomPhase = RoomState.RoomPhase.ROUND_RESULTS;
-
-          duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("GAME_RESULTS", updated));
+          if (updated.roundCount >= updated.roomSettings.roundCount) {
+            updated.roomPhase = RoomState.RoomPhase.GAME_RESULTS;
+            duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("GAME_RESULTS", updated));
+          } else {
+            updated.roomPhase = RoomState.RoomPhase.ROUND_RESULTS;
+            duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("ROUND_RESULTS", updated));
+          }
         }
       }
 
       case "START_GAME" -> {
+        if (duelGameService.getRoomState(msg.roomId).roomPhase != RoomPhase.WAITING) {
+          ServerMessage response = new ServerMessage("INVALID_OPERATION");
+          session.sendMessage(new TextMessage(mapper.writeValueAsBytes(response)));
+          return;
+        }
         RoomState roomState = duelGameService.startGame(msg.roomId);
         duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("ROUND_STARTED", roomState));
       }
 
       case "NEXT_ROUND" -> {
+        if (duelGameService.getRoomState(msg.roomId).roomPhase != RoomPhase.ROUND_RESULTS) {
+          ServerMessage response = new ServerMessage("INVALID_OPERATION");
+          session.sendMessage(new TextMessage(mapper.writeValueAsBytes(response)));
+          return;
+        }
         RoomState roomState = duelGameService.nextRound(msg.roomId);
         duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("ROUND_STARTED", roomState));
       }
