@@ -22,7 +22,6 @@ const PregameView: React.FC<Props> = ({ playSet, onStart }) => (
       p: 4,
     }}
   >
-    <Typography variant="h2">Singleplayer</Typography>
     <Paper
       sx={{
         display: "flex",
@@ -42,9 +41,18 @@ const PregameView: React.FC<Props> = ({ playSet, onStart }) => (
         </Typography>
       </Stack>
       <Stack direction="row" spacing={1}>
-        <Chip label={playSet.allowMove ? "MOVE" : "NO MOVE"} color={playSet.allowMove ? "success" : "default"} />
-        <Chip label={playSet.allowPan ? "PAN" : "NO PAN"} color={playSet.allowPan ? "success" : "default"} />
-        <Chip label={playSet.allowZoom ? "ZOOM" : "NO ZOOM"} color={playSet.allowZoom ? "success" : "default"} />
+        <Chip
+          label={playSet.allowMove ? "MOVE" : "NO MOVE"}
+          color={playSet.allowMove ? "success" : "default"}
+        />
+        <Chip
+          label={playSet.allowPan ? "PAN" : "NO PAN"}
+          color={playSet.allowPan ? "success" : "default"}
+        />
+        <Chip
+          label={playSet.allowZoom ? "ZOOM" : "NO ZOOM"}
+          color={playSet.allowZoom ? "success" : "default"}
+        />
       </Stack>
     </Paper>
     <Button onClick={onStart} variant="contained" size="large">

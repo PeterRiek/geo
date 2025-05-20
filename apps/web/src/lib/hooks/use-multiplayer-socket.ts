@@ -63,7 +63,7 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
     return () => {
       ws.close();
     };
-  }, [roomId]);
+  }, [roomId, accessToken]);
 
   const createRoom = (_roomId: string, settings?: GameSettings) => {
     socketRef.current?.send(

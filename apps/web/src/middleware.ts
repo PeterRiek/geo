@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { auth, signOut } from "@/auth";
-import { logout } from "./lib/actions/auth";
+import { auth } from "@/auth";
 
 const protectedRoutes = ["/profile", "/game"];
 

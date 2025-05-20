@@ -1,6 +1,6 @@
 "use client";
 
-import useMultiplayerSocket from "@/lib/hooks/ws";
+import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
 import { Coords } from "@/types/geo";
 import {
   Box,
@@ -180,6 +180,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
     const userGuess = gameState.allGuesses[username];
     const otherGuesses = Object.entries(gameState.allGuesses)
       .filter(([_username]) => _username !== username)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       .map(([_, guess]) => guess);
 
     const distance = getDistanceInKm(guessLocation, gameState.targetLocation);

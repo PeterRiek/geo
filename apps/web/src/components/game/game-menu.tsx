@@ -1,8 +1,7 @@
 "use client";
 
-import useMultiplayerSocket from "@/lib/hooks/ws";
+import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
 import {
-  Box,
   Button,
   CircularProgress,
   Container,
@@ -16,7 +15,6 @@ import React, { useEffect, useState } from "react";
 
 const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
-  username,
 }) => {
   const [maps, setMaps] = useState<{ id: number; name: string }[]>([]);
   const [moveEnabled, setMoveEnabled] = useState(true);
@@ -114,6 +112,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
       <Button
         href={`/game/play/sp/?mapId=${selectedMap}&allowMove=${moveEnabled}&allowPan=${panEnabled}&allowZoom=${zoomEnabled}`}
         variant="contained"
+        fullWidth
         disabled={!selectedMap}
       >
         Play Singleplayer
