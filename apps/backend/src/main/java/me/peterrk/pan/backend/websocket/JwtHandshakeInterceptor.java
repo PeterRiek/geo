@@ -46,7 +46,6 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
         return false;
       }
     }
-
     return false;
   }
 

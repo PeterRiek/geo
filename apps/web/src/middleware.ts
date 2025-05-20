@@ -17,9 +17,6 @@ const middleware = async (request: NextRequest) => {
   if (isProtected && !session) {
     return NextResponse.redirect(new URL("/", request.url));
   }
-  if (isProtected && session && Date.parse(session.expires) < Date.now()) {
-    return NextResponse.redirect(new URL("/session-expired", request.url));
-  }
 
   const isStaticAsset =
     pathname.startsWith("/_next") ||
