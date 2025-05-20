@@ -1,7 +1,7 @@
 import { createImageMarker } from "@/lib/maputil";
 import { Coords } from "@/types/geo";
 import { Loader } from "@googlemaps/js-api-loader";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface MapProps {
   onMapClick?: (c: Coords) => void;
@@ -27,11 +27,12 @@ const Map: React.FC<MapProps> = ({
   onCenterChange,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map>(null);
-  const clickMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement>(null);
-  const targetMarkerRef =
-    useRef<google.maps.marker.AdvancedMarkerElement>(null);
-  const markerLibraryRef = useRef<google.maps.MarkerLibrary>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const clickMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const targetMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const markerLibraryRef = useRef<google.maps.MarkerLibrary | null>(null);
+
+  const [mapReady, setMapReady] = useState(false);
 
   const setClickMarker = (position: Coords) => {
     if (!mapInstanceRef.current || !markerLibraryRef.current) return;
@@ -44,7 +45,7 @@ const Map: React.FC<MapProps> = ({
     } else {
       clickMarkerRef.current = new AdvancedMarkerElement({
         map: mapInstanceRef.current,
-        position: position,
+        position,
         content: createImageMarker("/icons/marker-guess.png", "marker-guess"),
       });
     }
@@ -58,9 +59,7 @@ const Map: React.FC<MapProps> = ({
       });
 
       const { Map } = await loader.importLibrary("maps");
-      markerLibraryRef.current = (await loader.importLibrary(
-        "marker"
-      )) as google.maps.MarkerLibrary;
+      markerLibraryRef.current = await loader.importLibrary("marker") as google.maps.MarkerLibrary;
 
       const mapOptions: google.maps.MapOptions = {
         center: center ?? { lat: 0, lng: 0 },
@@ -74,53 +73,45 @@ const Map: React.FC<MapProps> = ({
 
       const map = new Map(mapRef.current as HTMLDivElement, mapOptions);
       mapInstanceRef.current = map;
-
-      if (guessLocation) setClickMarker(guessLocation);
-
-      map.addListener("click", (e: google.maps.MapMouseEvent) => {
-        if (mapClicksDisabled) return;
-        console.log("clicked", e, "disabled", mapClicksDisabled);
-        if (e.latLng) {
-          const position = {
-            lat: e.latLng.lat(),
-            lng: e.latLng.lng(),
-          };
-          onMapClick?.(position);
-          setClickMarker(position);
-        }
-      });
-
-      map.addListener("zoom_changed", () => {
-        const currentZoom = map.getZoom();
-        if (typeof currentZoom === "number") {
-          onZoomChange?.(currentZoom);
-        }
-      });
-
-      map.addListener("center_changed", () => {
-        const currentCenter = map.getCenter();
-        if (currentCenter) {
-          onCenterChange?.({
-            lat: currentCenter.lat(),
-            lng: currentCenter.lng(),
-          });
-        }
-      });
+      setMapReady(true);
     };
 
     initMap();
   }, []);
 
+  // Dynamic map click listener
   useEffect(() => {
-    if (!mapInstanceRef.current || !markerLibraryRef.current || !guessLocation)
-      return;
-    console.log("update guess location");
-    setClickMarker(guessLocation);
-  }, [guessLocation]);
+    if (!mapReady || !mapInstanceRef.current) return;
 
-  // Handle showTarget updates
+    const map = mapInstanceRef.current;
+
+    const handleClick = (e: google.maps.MapMouseEvent) => {
+      if (mapClicksDisabled) return;
+      if (e.latLng) {
+        const position = {
+          lat: e.latLng.lat(),
+          lng: e.latLng.lng(),
+        };
+        onMapClick?.(position);
+        setClickMarker(position);
+      }
+    };
+
+    const listener = map.addListener("click", handleClick);
+    return () => {
+      google.maps.event.removeListener(listener);
+    };
+  }, [mapClicksDisabled, onMapClick, mapReady]);
+
+  // Set click marker if guessLocation changes
   useEffect(() => {
-    if (!mapInstanceRef.current || !markerLibraryRef.current) return;
+    if (!mapReady || !mapInstanceRef.current || !guessLocation) return;
+    setClickMarker(guessLocation);
+  }, [guessLocation, mapReady]);
+
+  // Show or hide target marker
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || !markerLibraryRef.current) return;
 
     const { AdvancedMarkerElement } = markerLibraryRef.current;
 
@@ -132,17 +123,49 @@ const Map: React.FC<MapProps> = ({
         targetMarkerRef.current = new AdvancedMarkerElement({
           map: mapInstanceRef.current,
           position: targetLocation,
-          content: createImageMarker(
-            "/icons/marker-target.png",
-            "marker-target"
-          ),
+          content: createImageMarker("/icons/marker-target.png", "marker-target"),
         });
       }
     } else if (targetMarkerRef.current) {
-      // Remove marker from map
       targetMarkerRef.current.map = null;
     }
-  }, [targetVisible, targetLocation]);
+  }, [targetVisible, targetLocation, mapReady]);
+
+  // Zoom change listener
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+
+    const map = mapInstanceRef.current;
+
+    const listener = map.addListener("zoom_changed", () => {
+      const currentZoom = map.getZoom();
+      if (typeof currentZoom === "number") {
+        onZoomChange?.(currentZoom);
+      }
+    });
+
+    return () => {
+      google.maps.event.removeListener(listener);
+    };
+  }, [onZoomChange, mapReady]);
+
+  // Center change listener
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+
+    const map = mapInstanceRef.current;
+
+    const listener = map.addListener("center_changed", () => {
+      const center = map.getCenter();
+      if (center) {
+        onCenterChange?.({ lat: center.lat(), lng: center.lng() });
+      }
+    });
+
+    return () => {
+      google.maps.event.removeListener(listener);
+    };
+  }, [onCenterChange, mapReady]);
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
 };

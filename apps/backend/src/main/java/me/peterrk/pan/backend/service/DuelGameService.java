@@ -29,23 +29,30 @@ public class DuelGameService {
     this.gameMapService = gameMapService;
   }
 
-  public RoomState joinRoom(String roomId, String username, WebSocketSession session) {
-    roomSessions.computeIfAbsent(roomId, id -> ConcurrentHashMap.newKeySet()).add(session);
+  public RoomState createRoom(String roomId) {
+    GameSettings gameSettings = new GameSettings();
+    gameSettings.allowPan = true;
+    gameSettings.allowZoom = true;
+    gameSettings.mapId = 1L;
+    gameSettings.roundCount = 2;
+    return createRoom(roomId, gameSettings);
+  }
 
+  public RoomState createRoom(String roomId, GameSettings gameSettings) {
     return rooms.computeIfAbsent(roomId, id -> {
-      // TODO: user sets room settings
       RoomState room = new RoomState();
       room.roomId = roomId;
-      room.roomSettings = new GameSettings();
-      room.roomSettings.allowPan = true;
-      room.roomSettings.allowZoom = true;
-      room.roomSettings.mapId = 1L;
-      room.roomSettings.roundCount = 2;
+      room.roomSettings = gameSettings;
       room.roomPhase = RoomState.RoomPhase.WAITING;
       room.roundCount = 0;
       room.allGuesses = new ConcurrentHashMap<>();
       return room;
     });
+  }
+
+  public RoomState joinRoom(String roomId, String username, WebSocketSession session) {
+    roomSessions.computeIfAbsent(roomId, id -> ConcurrentHashMap.newKeySet()).add(session);
+    return getRoomState(roomId);
   }
 
   public void submitGuess(String roomId, String username, LatLng guess) {
@@ -88,6 +95,22 @@ public class DuelGameService {
 
   public RoomState getRoomState(String roomId) {
     return rooms.get(roomId);
+  }
+
+  public void closeRoom(String roomId) {
+    rooms.remove(roomId);
+    Set<WebSocketSession> sessions = roomSessions.remove(roomId);
+    if (sessions != null) {
+      for (WebSocketSession session : sessions) {
+        try {
+          if (session.isOpen()) {
+            session.close();
+          }
+        } catch (Exception e) {
+          System.err.println("Error closing session: " + e.getMessage());
+        }
+      }
+    }
   }
 
   public LatLng getRandomTarget(Long mapId) {

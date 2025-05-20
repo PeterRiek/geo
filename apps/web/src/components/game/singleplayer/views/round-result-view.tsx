@@ -8,6 +8,7 @@ interface Props {
   distance: number;
   guessLocation: Coords;
   targetLocation: Coords;
+  otherGuessLocations?: Coords[];
   center: Coords;
   zoom: number;
   onNext: () => void;
@@ -19,6 +20,7 @@ const RoundResultView: React.FC<Props> = ({
   distance,
   guessLocation,
   targetLocation,
+  otherGuessLocations,
   center,
   zoom,
   onNext,
@@ -50,6 +52,7 @@ const RoundResultView: React.FC<Props> = ({
         <SummaryMap
           guessLocation={guessLocation}
           targetLocation={targetLocation}
+          otherGuesses={otherGuessLocations}
           center={center}
           zoom={zoom}
         />

@@ -2,14 +2,20 @@
 
 import useMultiplayerSocket from "@/lib/hooks/ws";
 import { Coords } from "@/types/geo";
-import { Box, Button, Stack, useMediaQuery, useTheme } from "@mui/material";
-import React, { useEffect, useState } from "react";
-import StreetViewPano from "../street-view-pano";
-import GuessrMobileUI from "../guessing-ui-mobile";
-import GuessrUI from "../guessing-ui";
+import {
+  Box,
+  Button,
+  Stack,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
+import React, { useEffect, useMemo, useState } from "react";
 import InGameView from "../singleplayer/views/ingame-view";
 import RoundResultView from "../singleplayer/views/round-result-view";
 import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
+import { useSearchParams } from "next/navigation";
+import PostgameView from "../singleplayer/views/postgame-view";
 
 export type GamePhase = "PREGAME" | "INGAME" | "ROUND_RESULT" | "POSTGAME";
 
@@ -17,53 +23,106 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
   username,
 }) => {
+  const searchParams = useSearchParams();
+  const roomId = useMemo(() => searchParams.get("roomId"), [searchParams]);
+  // load searchparam.roomId into useMultiplaerSocker
+
   const { gameState, join, startGame, nextRound, submitGuess } =
-    useMultiplayerSocket("Room_Y", accessToken);
+    useMultiplayerSocket(roomId ?? "default", accessToken);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [guessLocation, setGuessLocation] = useState<Coords>();
   const [roundFinished, setRoundFinished] = useState(false);
+  const [prevGamePhase, setPrevGamePhase] = useState("");
+
+  const startRound = () => {
+    setGuessLocation(undefined);
+    setRoundFinished(false);
+  };
+
+  const initRound = () => {
+    if (!gameState) return;
+    const guess = gameState.allGuesses[username];
+    if (!guess) return;
+    setGuessLocation(guess);
+    setRoundFinished(true);
+  };
 
   useEffect(() => {
-    if (!gameState) return;
-
-    const guess = gameState.allGuesses[username];
-    if (guess) {
-      setGuessLocation({ ...guess });
-      setRoundFinished(true);
-      console.log("round finished", true, roundFinished)
-    } else {
-      setGuessLocation(undefined);
-      setRoundFinished(false);
-      console.log("reset round finished")
+    if (!gameState || !gameState.roomPhase) return;
+    console.log(prevGamePhase, "->", gameState.roomPhase);
+    if (prevGamePhase == "" && gameState.roomPhase == "ROUND_IN_PROGRESS") {
+      initRound();
     }
-  }, [gameState, username]);
+    if (
+      prevGamePhase == "WAITING" &&
+      gameState.roomPhase == "ROUND_IN_PROGRESS"
+    ) {
+      startRound();
+    }
+    if (
+      prevGamePhase == "ROUND_RESULTS" &&
+      gameState.roomPhase == "ROUND_IN_PROGRESS"
+    ) {
+      startRound();
+    }
+    setPrevGamePhase(gameState.roomPhase);
+  }, [gameState?.roomPhase]);
+
+  useEffect(() => {}, []);
 
   const onMapClick = (pos: Coords) => {
-    console.log("clicked", roundFinished);
     if (roundFinished) return;
     setGuessLocation(pos);
   };
 
   const onGuess = () => {
     if (!guessLocation) return;
-    setRoundFinished(true);
     submitGuess(guessLocation);
+    setRoundFinished(true);
   };
 
   const start = () => {
     startGame();
-    setRoundFinished(false);
   };
 
   const next = () => {
     nextRound();
-    setRoundFinished(false);
   };
 
-  if (!gameState) return <Button onClick={() => join()}>JOIN</Button>;
+  if (!gameState)
+    return (
+      <Box
+        sx={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 4,
+          p: 4,
+        }}
+      >
+        <Stack>
+          <Typography variant="h2" textAlign="center">
+            In room
+          </Typography>
+          <Typography variant="h2" fontWeight={500} textAlign="center">
+            {roomId}
+          </Typography>
+        </Stack>
+        <Stack gap={1}>
+          <Button onClick={() => join()} variant="contained" size="large">
+            TRY TO REJOIN
+          </Button>
+          <Button href="/game" variant="contained" size="large">
+            BACK TO MENU
+          </Button>
+        </Stack>
+      </Box>
+    );
 
   const isGameStateReady =
     gameState && gameState.allGuesses && gameState.roomPhase;
@@ -74,8 +133,29 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
 
   const gameSettings = gameState.roomSettings;
 
+  if (gameState.roomPhase == "GAME_RESULTS") return <PostgameView />;
+
   if (gameState.roomPhase == "WAITING")
-    return <Button onClick={() => start()}>START</Button>;
+    return (
+      <Box
+        sx={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 4,
+          p: 4,
+        }}
+      >
+        <Typography variant="h1" textAlign="center">
+          Waiting to start...
+        </Typography>
+        <Button onClick={() => start()} variant="contained" size="large">
+          Start Game
+        </Button>
+      </Box>
+    );
 
   if (gameState.roomPhase == "ROUND_IN_PROGRESS" && gameState.targetLocation)
     return (
@@ -84,6 +164,8 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         targetLocation={gameState.targetLocation}
         guessLocation={guessLocation}
         roundFinished={roundFinished}
+        targetVisible={false}
+        guessingDisabled={!guessLocation || roundFinished}
         onMapClick={onMapClick}
         onGuess={onGuess}
         moveEnabled={gameSettings.allowMove}
@@ -95,6 +177,11 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   if (!guessLocation) return <div>Error: No guess location.</div>;
 
   if (gameState.roomPhase == "ROUND_RESULTS") {
+    const userGuess = gameState.allGuesses[username];
+    const otherGuesses = Object.entries(gameState.allGuesses)
+      .filter(([_username]) => _username !== username)
+      .map(([_, guess]) => guess);
+
     const distance = getDistanceInKm(guessLocation, gameState.targetLocation);
     const score = getGuessrScore(distance, 10_000);
     const center = getCenterCoords(guessLocation, gameState.targetLocation);
@@ -104,8 +191,9 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       <RoundResultView
         score={score}
         distance={distance}
-        guessLocation={guessLocation}
+        guessLocation={userGuess}
         targetLocation={gameState.targetLocation}
+        otherGuessLocations={otherGuesses}
         center={center}
         zoom={zoom}
         onNext={next}

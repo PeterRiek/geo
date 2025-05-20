@@ -9,6 +9,8 @@ interface Props {
   targetLocation: Coords;
   guessLocation?: Coords;
   roundFinished: boolean;
+  targetVisible?: boolean;
+  guessingDisabled?: boolean;
   onMapClick: (pos: Coords) => void;
   onGuess: () => void;
   moveEnabled?: boolean;
@@ -21,13 +23,14 @@ const InGameView: React.FC<Props> = ({
   targetLocation,
   guessLocation,
   roundFinished,
+  targetVisible,
+  guessingDisabled,
   onMapClick,
   onGuess,
   moveEnabled,
   panEnabled,
   zoomEnabled,
 }) => {
-  console.log(roundFinished);
   return (
     <>
       <Box sx={{ width: "100%", height: "100%" }}>
@@ -41,17 +44,17 @@ const InGameView: React.FC<Props> = ({
       {isMobile ? (
         <GuessrMobileUI
           targetLocation={targetLocation}
-          targetVisible={roundFinished}
+          targetVisible={targetVisible ?? roundFinished}
           guessLocation={guessLocation}
-          guessingDisabled={!guessLocation || roundFinished}
+          guessingDisabled={guessingDisabled ?? roundFinished}
           onMapClick={onMapClick}
           onGuess={onGuess}
         />
       ) : (
         <GuessrUI
           targetLocation={targetLocation}
-          targetVisible={roundFinished}
-          guessingDisabled={!guessLocation || roundFinished}
+          targetVisible={targetVisible ?? roundFinished}
+          guessingDisabled={guessingDisabled ?? roundFinished}
           guessLocation={guessLocation}
           mapClicksDisabled={roundFinished}
           onMapClick={onMapClick}

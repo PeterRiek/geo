@@ -3,9 +3,26 @@
 import { Coords } from "@/types/geo";
 import { useEffect, useRef, useState } from "react";
 
-const useMultiplayerSocket = (roomId: string, accessToken?: string) => {
+interface GameSettings {
+  mapId: number;
+  allowMove: boolean;
+  allowPan: boolean;
+  allowZoom: boolean;
+  roundCount: number;
+}
+
+interface GameState {
+  roomId: string;
+  roomPhase: string;
+  roundCount: number;
+  roomSettings: GameSettings;
+  targetLocation: Coords;
+  allGuesses: { [username: string]: Coords };
+}
+
+const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
   const socketRef = useRef<WebSocket | null>(null);
-  const [gameState, setGameState] = useState<any>();
+  const [gameState, setGameState] = useState<GameState>();
 
   useEffect(() => {
     const ws = new WebSocket(
@@ -13,14 +30,16 @@ const useMultiplayerSocket = (roomId: string, accessToken?: string) => {
     );
     socketRef.current = ws;
 
-    ws.onopen = () => {
-      ws.send(
-        JSON.stringify({
-          type: "JOIN",
-          roomId,
-        })
-      );
-    };
+    if (roomId) {
+      ws.onopen = () => {
+        ws.send(
+          JSON.stringify({
+            type: "JOIN",
+            roomId,
+          })
+        );
+      };
+    }
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
@@ -45,6 +64,17 @@ const useMultiplayerSocket = (roomId: string, accessToken?: string) => {
       ws.close();
     };
   }, [roomId]);
+
+  const createRoom = (_roomId: string, settings?: GameSettings) => {
+    socketRef.current?.send(
+      JSON.stringify({
+        type: "CREATE",
+        roomId: _roomId,
+        payload: settings,
+      })
+    );
+    console.log("create room", _roomId)
+  };
 
   const join = () => {
     socketRef.current?.send(
@@ -74,6 +104,7 @@ const useMultiplayerSocket = (roomId: string, accessToken?: string) => {
   };
 
   const submitGuess = (guess: Coords) => {
+    console.log("submitGuess", guess)
     socketRef.current?.send(
       JSON.stringify({
         type: "GUESS",
@@ -83,7 +114,7 @@ const useMultiplayerSocket = (roomId: string, accessToken?: string) => {
     );
   };
 
-  return { gameState, join, startGame, nextRound, submitGuess };
+  return { gameState, join, createRoom, startGame, nextRound, submitGuess };
 };
 
 export default useMultiplayerSocket;
