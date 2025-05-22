@@ -16,8 +16,8 @@ interface GameState {
   roomPhase: string;
   roundCount: number;
   roomSettings: GameSettings;
-  targetLocation: Coords;
-  allGuesses: { [username: string]: Coords };
+  allTargets: Coords[];
+  allGuesses: { [username: string]: Coords }[];
 }
 
 const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {

@@ -1,5 +1,6 @@
 package me.peterrk.pan.backend.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -45,7 +46,8 @@ public class DuelGameService {
       room.roomSettings = gameSettings;
       room.roomPhase = RoomState.RoomPhase.WAITING;
       room.roundCount = 0;
-      room.allGuesses = new ConcurrentHashMap<>();
+      room.allGuesses = new ArrayList<Map<String, LatLng>>();
+      room.allTargets = new ArrayList<LatLng>();
       return room;
     });
   }
@@ -57,17 +59,20 @@ public class DuelGameService {
 
   public void submitGuess(String roomId, String username, LatLng guess) {
     RoomState room = rooms.get(roomId);
-    if (room != null && room.roomPhase == RoomState.RoomPhase.ROUND_IN_PROGRESS)
-      room.allGuesses.put(username, guess);
+    if (room != null && room.roomPhase == RoomState.RoomPhase.ROUND_IN_PROGRESS) {
+      while (room.allGuesses.size()-1 <  room.roundCount)
+        room.allGuesses.add(new ConcurrentHashMap<String, LatLng>());
+      room.allGuesses.get(room.roundCount).put(username, guess);
+    }
   }
 
   public RoomState startGame(String roomId) {
     RoomState room = rooms.get(roomId);
     if (room != null) {
       room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
-      room.targetLocation = getRandomTarget(getRoomState(roomId).roomSettings.mapId);
+      room.allTargets.add(getRandomTarget(getRoomState(roomId).roomSettings.mapId));
       room.roundCount++;
-      room.allGuesses = new ConcurrentHashMap<>();
+      room.allGuesses = new ArrayList<Map<String,LatLng>>();
     }
     return room;
   }
@@ -76,9 +81,9 @@ public class DuelGameService {
     RoomState room = rooms.get(roomId);
     if (room != null) {
       room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
-      room.targetLocation = getRandomTarget(getRoomState(roomId).roomSettings.mapId);
+      room.allTargets.add(getRandomTarget(getRoomState(roomId).roomSettings.mapId));
       room.roundCount++;
-      room.allGuesses = new ConcurrentHashMap<>();
+      room.allGuesses = new ArrayList<Map<String,LatLng>>();
     }
     return room;
   }

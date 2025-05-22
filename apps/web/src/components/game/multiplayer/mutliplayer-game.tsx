@@ -44,7 +44,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
 
   const initRound = () => {
     if (!gameState) return;
-    const guess = gameState.allGuesses[username];
+    const guess = gameState.allGuesses[gameState.roundCount][username];
     if (!guess) return;
     setGuessLocation(guess);
     setRoundFinished(true);
@@ -133,7 +133,14 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
 
   const gameSettings = gameState.roomSettings;
 
-  if (gameState.roomPhase == "GAME_RESULTS") return <PostgameView />;
+  if (gameState.roomPhase == "GAME_RESULTS")
+    return (
+      <PostgameView
+        username={username}
+        allGuesses={gameState.allGuesses}
+        allTargets={gameState.allTargets}
+      />
+    );
 
   if (gameState.roomPhase == "WAITING")
     return (
@@ -157,11 +164,14 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       </Box>
     );
 
-  if (gameState.roomPhase == "ROUND_IN_PROGRESS" && gameState.targetLocation)
+  if (
+    gameState.roomPhase == "ROUND_IN_PROGRESS" &&
+    gameState.allTargets[gameState.roundCount]
+  )
     return (
       <InGameView
         isMobile={isMobile}
-        targetLocation={gameState.targetLocation}
+        targetLocation={gameState.allTargets[gameState.roundCount]}
         guessLocation={guessLocation}
         roundFinished={roundFinished}
         targetVisible={false}
@@ -174,18 +184,22 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       />
     );
 
-  if (!guessLocation) return <div>Error: No guess location.</div>;
-
   if (gameState.roomPhase == "ROUND_RESULTS") {
-    const userGuess = gameState.allGuesses[username];
-    const otherGuesses = Object.entries(gameState.allGuesses)
+    const userGuess = gameState.allGuesses[gameState.roundCount][username];
+    const otherGuesses = Object.entries(
+      gameState.allGuesses[gameState.roundCount]
+    )
       .filter(([_username]) => _username !== username)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       .map(([_, guess]) => guess);
 
-    const distance = getDistanceInKm(guessLocation, gameState.targetLocation);
-    const score = getGuessrScore(distance, 10_000);
-    const center = getCenterCoords(guessLocation, gameState.targetLocation);
+    const distance = userGuess
+      ? getDistanceInKm(userGuess, gameState.allTargets[gameState.roundCount])
+      : -1;
+    const score = userGuess ? getGuessrScore(distance, 10_000) : 0;
+    const center = userGuess
+      ? getCenterCoords(userGuess, gameState.allTargets[gameState.roundCount])
+      : { lat: 0, lng: 0 };
     const zoom = 1 + (score / 5000) * 8;
 
     return (
@@ -193,7 +207,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         score={score}
         distance={distance}
         guessLocation={userGuess}
-        targetLocation={gameState.targetLocation}
+        targetLocation={gameState.allTargets[gameState.roundCount]}
         otherGuessLocations={otherGuesses}
         center={center}
         zoom={zoom}

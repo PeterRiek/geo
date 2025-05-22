@@ -28,7 +28,6 @@ public class DuelWebSocketHandler extends TextWebSocketHandler {
   protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
     ClientMessage msg = mapper.readValue(message.getPayload(), ClientMessage.class);
     String username = (String) session.getAttributes().get("username");
-    System.out.println("incoming");
 
     System.out.println("[" + username + "] - " + msg.roomId + " - " + msg.type + " - " + (msg.payload != null
         ? (mapper.writeValueAsString(msg.payload))
@@ -73,7 +72,7 @@ public class DuelWebSocketHandler extends TextWebSocketHandler {
         LatLng guess = mapper.convertValue(msg.payload, LatLng.class);
         duelGameService.submitGuess(msg.roomId, username, guess);
         RoomState updated = duelGameService.getRoomState(msg.roomId);
-        if (updated.allGuesses.size() >= 2) {
+        if (updated.allGuesses.get(updated.roundCount).size() >= 2) {
           if (updated.roundCount >= updated.roomSettings.roundCount) {
             updated.roomPhase = RoomState.RoomPhase.GAME_RESULTS;
             duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("GAME_RESULTS", updated));

@@ -6,7 +6,7 @@ import SummaryMap from "@/components/game/summary-map";
 interface Props {
   score: number;
   distance: number;
-  guessLocation: Coords;
+  guessLocation?: Coords;
   targetLocation: Coords;
   otherGuessLocations?: Coords[];
   center: Coords;

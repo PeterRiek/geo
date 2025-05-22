@@ -4,7 +4,7 @@ import { Loader } from "@googlemaps/js-api-loader";
 import React, { useEffect, useRef } from "react";
 
 interface SummaryMapProps {
-  guessLocation: Coords;
+  guessLocation?: Coords;
   otherGuesses?: Coords[];
   targetLocation: Coords;
   center?: Coords;
@@ -64,23 +64,25 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
         content: createImageMarker("/icons/marker-target.png", "marker-target"),
       });
 
-      guessMarkerRef.current = new AdvancedMarkerElement({
-        map,
-        position: guessLocation,
-        content: createImageMarker("/icons/marker-guess.png", "marker-guess"),
-      });
-
-      lineRef.current = [];
-      lineRef.current.push(
-        new google.maps.Polyline({
-          path: [guessLocation, targetLocation],
-          strokeColor: "#121212",
-          strokeOpacity: 0.5,
-          strokeWeight: 4,
+      if (guessLocation) {
+        guessMarkerRef.current = new AdvancedMarkerElement({
           map,
-          clickable: false,
-        })
-      );
+          position: guessLocation,
+          content: createImageMarker("/icons/marker-guess.png", "marker-guess"),
+        });
+
+        lineRef.current = [];
+        lineRef.current.push(
+          new google.maps.Polyline({
+            path: [guessLocation, targetLocation],
+            strokeColor: "#121212",
+            strokeOpacity: 0.5,
+            strokeWeight: 4,
+            map,
+            clickable: false,
+          })
+        );
+      }
 
       otherMarkerRefs.current = [];
       otherGuesses?.forEach((position) => {
