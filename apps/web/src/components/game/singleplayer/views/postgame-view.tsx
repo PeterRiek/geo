@@ -4,7 +4,6 @@ import { Coords } from "@/types/geo";
 import {
   Box,
   Button,
-  Divider,
   MenuItem,
   Select,
   SelectChangeEvent,
@@ -46,13 +45,14 @@ const PostgameView: React.FC<Props> = ({
       </Typography>
       <Select value={round} onChange={handleChange}>
         {allGuesses.map((e, i) => (
-          <MenuItem value={i}>Round {i + 1}</MenuItem>
+          <MenuItem value={i} key={i}>Round {i + 1}</MenuItem>
         ))}
       </Select>
       <SummaryMap
         targetLocation={allTargets[round]}
         otherGuesses={Object.entries(allGuesses[round])
           .filter(([_username]) => _username !== username)
+          // eslint-disable-next-line
           .map(([_, guess]) => guess)}
         guessLocation={allGuesses[round][username]}
       />

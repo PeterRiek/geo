@@ -14,6 +14,7 @@ import {
 import MapSelect from "./MapSelect";
 import NMPZSelect from "./NMPZSelect";
 
+// eslint-disable-next-line
 const MultiplayerSettings: React.FC<any> = ({
   maps,
   selectedMap,

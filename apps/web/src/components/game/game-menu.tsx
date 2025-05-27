@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Box, Divider } from "@mui/material";
 import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
 import ModeSelect from "./menu/ModeSelect";
@@ -31,6 +31,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
       setMapsLoading(true);
       const resp = await fetch("/api/gamemap");
       const data = await resp.json();
+      // eslint-disable-next-line
       setMaps(data.map((m: any) => ({ id: m.id, name: m.name })));
       setMapsLoading(false);
     };

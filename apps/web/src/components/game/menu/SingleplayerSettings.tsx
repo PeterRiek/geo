@@ -5,6 +5,7 @@ import { Box, Button, Container, Paper, Typography } from "@mui/material";
 import MapSelect from "./MapSelect";
 import NMPZSelect from "./NMPZSelect";
 
+// eslint-disable-next-line
 const SingleplayerSettings: React.FC<any> = ({
   maps,
   selectedMap,
