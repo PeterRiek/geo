@@ -6,6 +6,7 @@ interface Props {
     allowMove: boolean;
     allowZoom: boolean;
     allowPan: boolean;
+    roundCount: number;
   };
   onStart: () => void;
 }
@@ -39,6 +40,7 @@ const PregameView: React.FC<Props> = ({ playSet, onStart }) => (
         <Typography variant="h3" textAlign="center" fontWeight={500}>
           {playSet.mapId}
         </Typography>
+        <Typography>{playSet.roundCount}</Typography>
       </Stack>
       <Stack direction="row" spacing={1}>
         <Chip

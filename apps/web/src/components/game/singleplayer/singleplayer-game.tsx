@@ -12,8 +12,9 @@ import PostgameView from "@/components/game/singleplayer/views/postgame-view";
 
 export type GamePhase = "PREGAME" | "INGAME" | "ROUND_RESULT" | "POSTGAME";
 
-const SinglePlayerGame: React.FC<{ accessToken: string }> = ({
+const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
+  username,
 }) => {
   const searchParams = useSearchParams();
   const playSet = useMemo(
@@ -22,6 +23,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string }> = ({
       allowMove: searchParams.get("allowMove") === "true",
       allowZoom: searchParams.get("allowZoom") === "true",
       allowPan: searchParams.get("allowPan") === "true",
+      roundCount: Number.parseInt(searchParams.get("rounds") ?? "5") ?? 5,
     }),
     [searchParams]
   );
@@ -35,6 +37,10 @@ const SinglePlayerGame: React.FC<{ accessToken: string }> = ({
   const [guessLocation, setGuessLocation] = useState<Coords>();
   const [roundFinished, setRoundFinished] = useState(true);
   const [loadingTargetLocation, setLoadingTargetLocation] = useState(false);
+  const [allGuesses, setAllGuesses] = useState<
+    { [username: string]: Coords }[]
+  >([]);
+  const [allTargets, setAllTargets] = useState<Coords[]>([]);
 
   useEffect(() => {
     const startGameSession = async () => {
@@ -75,7 +81,11 @@ const SinglePlayerGame: React.FC<{ accessToken: string }> = ({
         setGamePhase("ROUND_RESULT");
         break;
       case "ROUND_RESULT":
-        if (gameRoundCount >= 5) {
+        if (guessLocation)
+          setAllGuesses([...allGuesses, { [username]: guessLocation }]);
+        if (targetLocation) setAllTargets([...allTargets, targetLocation]);
+
+        if (gameRoundCount >= playSet.roundCount) {
           setGamePhase("POSTGAME");
         } else {
           setGuessLocation(undefined);
@@ -157,7 +167,13 @@ const SinglePlayerGame: React.FC<{ accessToken: string }> = ({
   }
 
   if (gamePhase === "POSTGAME") {
-    return <PostgameView />;
+    return (
+      <PostgameView
+        allGuesses={allGuesses}
+        allTargets={allTargets}
+        username={username}
+      />
+    );
   }
 
   return <div>Unknown game state</div>;

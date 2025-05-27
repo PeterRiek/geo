@@ -7,7 +7,9 @@ const PlaySinglePlayerPage = async () => {
 
   if (!session || !session.accessToken) return <div>Missing Accesstoken</div>;
 
-  return <SinglePlayerGame accessToken={session.accessToken} />;
+  if (!session || !session.user || !session.user.name) return <div>Missing Username</div>
+
+  return <SinglePlayerGame accessToken={session.accessToken} username={session.user.name} />;
 };
 
 export default PlaySinglePlayerPage;

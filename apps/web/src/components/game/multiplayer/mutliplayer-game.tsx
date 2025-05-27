@@ -164,6 +164,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       </Box>
     );
 
+  console.log(gameSettings, gameState);
   if (
     gameState.roomPhase == "ROUND_IN_PROGRESS" &&
     gameState.allTargets[gameState.roundCount]

@@ -71,7 +71,6 @@ public class DuelGameService {
     if (room != null) {
       room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
       room.allTargets.add(getRandomTarget(getRoomState(roomId).roomSettings.mapId));
-      room.roundCount++;
       room.allGuesses = new ArrayList<Map<String,LatLng>>();
     }
     return room;
@@ -80,10 +79,9 @@ public class DuelGameService {
   public RoomState nextRound(String roomId) {
     RoomState room = rooms.get(roomId);
     if (room != null) {
+      room.roundCount++;
       room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
       room.allTargets.add(getRandomTarget(getRoomState(roomId).roomSettings.mapId));
-      room.roundCount++;
-      room.allGuesses = new ArrayList<Map<String,LatLng>>();
     }
     return room;
   }
