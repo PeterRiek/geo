@@ -2,6 +2,7 @@
 
 import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
 import {
+  Box,
   Button,
   CircularProgress,
   Container,
@@ -9,9 +10,63 @@ import {
   Paper,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+
+const MapList: React.FC<{
+  maps: { id: number; name: string }[];
+  selectedMap?: number;
+  setSelectedMap: (id: number) => void;
+  scrollPositionRef: React.RefObject<number>;
+}> = ({ maps, selectedMap, setSelectedMap, scrollPositionRef }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMapClick = (id: number) => {
+    if (containerRef.current) {
+      scrollPositionRef.current = containerRef.current.scrollTop;
+    }
+    setSelectedMap(id);
+  };
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = scrollPositionRef.current;
+    }
+  }, []);
+
+  return (
+    <Box
+      ref={containerRef}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        overflowY: "auto",
+        maxHeight: "100%",
+        width: "100%",
+        gap: 1,
+        boxSizing: "border-box",
+        position: "relative",
+      }}
+    >
+      {maps.map((map) => (
+        <ToggleButton
+          key={map.id}
+          value={map.id}
+          selected={selectedMap === map.id}
+          onClick={() => handleMapClick(map.id)}
+          fullWidth
+          color={selectedMap === map.id ? "primary" : "standard"}
+          sx={{ borderRadius: 1 }}
+        >
+          {map.name}
+        </ToggleButton>
+      ))}
+    </Box>
+  );
+};
 
 const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
@@ -21,6 +76,10 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   const [panEnabled, setPanEnabled] = useState(true);
   const [zoomEnabled, setZoomEnabled] = useState(true);
   const [selectedMap, setSelectedMap] = useState<number>();
+  const handleSelectMap = useCallback((id: number) => {
+    setSelectedMap(id);
+  }, []);
+
   const [mapsLoading, setMapsLoading] = useState(true);
 
   const [roomId, setRoomId] = useState("");
@@ -44,107 +103,198 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
     loadMaps();
   }, []);
 
-  return (
-    <Container sx={{ height: "100%", p: 4 }}>
-      <Typography variant="h2">Maps</Typography>
-      <Divider sx={{ my: 2 }} />
-      {/* List of Maps */}
-      {mapsLoading && <CircularProgress />}
-      {maps.length > 0 && (
-        <Stack spacing={1} maxHeight="50%" overflow="scroll">
-          {maps.map((m, i) => (
-            <Paper
-              key={`${m}${i}`}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                px: 4,
-                py: 1,
-              }}
-            >
-              <Typography>{m.name}</Typography>
-              <Button
-                onClick={() =>
-                  setSelectedMap(selectedMap === m.id ? undefined : m.id)
-                }
-                variant={m.id === selectedMap ? "contained" : "outlined"}
-                color={m.id === selectedMap ? "primary" : "inherit"}
-              >
-                {m.id === selectedMap ? "SELECTED" : "SELECT"}
-              </Button>
-            </Paper>
-          ))}
-        </Stack>
+  const [mode, setMode] = useState<"singleplayer" | "multiplayer">(
+    "singleplayer"
+  );
+
+  const handleModeChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newMode: "singleplayer" | "multiplayer"
+  ) => {
+    if (!newMode) return;
+    setMode(newMode);
+  };
+
+  const scrollPositionRef = useRef<number>(0); // NEW
+  const MapSelect = ({
+    maps,
+    selectedMap,
+    setSelectedMap,
+  }: {
+    maps: { id: number; name: string }[];
+    selectedMap?: number;
+    setSelectedMap: (id: number) => void;
+  }) => (
+    <>
+      {selectedMap && maps.find((m) => m.id === selectedMap) ? (
+        <Typography gutterBottom>
+          Selected Map:{" "}
+          <strong>{maps.find((m) => m.id === selectedMap)?.name}</strong>
+        </Typography>
+      ) : (
+        <Typography gutterBottom>No map selected</Typography>
       )}
-      {/* Toggle Playset Controls */}
-      <Stack direction="row" spacing={2} mt={2}>
-        <Button
-          variant={moveEnabled ? "contained" : "outlined"}
-          color={moveEnabled ? "primary" : "inherit"}
+      <Box
+        sx={{
+          height: "80%",
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {mapsLoading ? (
+          <CircularProgress />
+        ) : (
+          <MapList
+            maps={maps}
+            selectedMap={selectedMap}
+            setSelectedMap={setSelectedMap}
+            scrollPositionRef={scrollPositionRef}
+          />
+        )}
+      </Box>
+    </>
+  );
+
+  const ModeSelect = () => (
+    <ToggleButtonGroup
+      value={mode}
+      exclusive
+      onChange={handleModeChange}
+      color="primary"
+      size="large"
+    >
+      <ToggleButton value="singleplayer" aria-label="singleplayer">
+        Singleplayer
+      </ToggleButton>
+      <ToggleButton value="multiplayer" aria-label="multiplayer">
+        Multiplayer
+      </ToggleButton>
+    </ToggleButtonGroup>
+  );
+
+  const NMPZSelect = () => (
+    <Stack
+      direction={"row"}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 2,
+      }}
+    >
+      <ToggleButtonGroup
+        value={[moveEnabled, panEnabled, zoomEnabled]}
+        color="primary"
+      >
+        <ToggleButton
+          value="move"
+          selected={moveEnabled}
           onClick={() => setMoveEnabled((prev) => !prev)}
         >
           Move
-        </Button>
+        </ToggleButton>
 
-        <Button
-          variant={panEnabled ? "contained" : "outlined"}
-          color={panEnabled ? "primary" : "inherit"}
+        <ToggleButton
+          value="pan"
+          selected={panEnabled}
           onClick={() => setPanEnabled((prev) => !prev)}
         >
           Pan
-        </Button>
+        </ToggleButton>
 
-        <Button
-          variant={zoomEnabled ? "contained" : "outlined"}
-          color={zoomEnabled ? "primary" : "inherit"}
+        <ToggleButton
+          value="zoom"
+          selected={zoomEnabled}
           onClick={() => setZoomEnabled((prev) => !prev)}
         >
           Zoom
-        </Button>
-      </Stack>
-      <Divider sx={{ my: 2 }} />
+        </ToggleButton>
+      </ToggleButtonGroup>
+      <Button>Other </Button>
+      <Button>Other </Button>
+      <Button>Other </Button>
+    </Stack>
+  );
 
-      <Typography variant="h4" mb={2}>
-        Singleplayer
-      </Typography>
-
-      <Button
-        href={`/game/play/sp/?mapId=${selectedMap}&allowMove=${moveEnabled}&allowPan=${panEnabled}&allowZoom=${zoomEnabled}`}
-        variant="contained"
-        fullWidth
-        disabled={!selectedMap}
+  const SingleplayerSettings = () => {
+    return (
+      <Box
+        sx={{
+          height: "80%",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
       >
-        Play Singleplayer
-      </Button>
-      <Divider sx={{ my: 2 }} />
-
-      <Typography variant="h4">Multiplayer</Typography>
-      <Stack spacing={2} direction="column" mt={2}>
-        <TextField
-          label="Room ID"
-          value={roomId}
-          onChange={(e) => setRoomId(e.target.value)}
-          fullWidth
-        />
-        <Button
-          variant="contained"
-          onClick={() =>
-            createRoom(roomId, {
-              allowMove: moveEnabled,
-              allowPan: panEnabled,
-              allowZoom: zoomEnabled,
-              mapId: selectedMap ?? -1,
-              roundCount: 5,
-            })
-          }
-          href={`/game/play/mp?roomId=${roomId}`}
-          disabled={!selectedMap || !roomId}
+        <Container
+          sx={{
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+          }}
         >
-          Play Multiplayer
-        </Button>
-      </Stack>
-    </Container>
+          <Paper sx={{ p: 1 }}>
+            <MapSelect
+              maps={maps}
+              selectedMap={selectedMap}
+              setSelectedMap={setSelectedMap}
+            />
+          </Paper>
+          <Paper sx={{ p: 1 }}>
+            <NMPZSelect />
+          </Paper>
+          <Button
+            href={`/game/play/sp/?mapId=${selectedMap}&allowMove=${moveEnabled}&allowPan=${panEnabled}&allowZoom=${zoomEnabled}`}
+            variant="contained"
+            fullWidth
+            disabled={!selectedMap}
+          >
+            Play
+          </Button>
+        </Container>
+      </Box>
+    );
+  };
+
+  const MultiplayerSettings = () => {
+    return <Box sx={{ height: "80%" }}></Box>;
+  };
+
+  return (
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <ModeSelect />
+      <Divider sx={{ my: 4 }} />
+      {mode === "singleplayer" ? (
+        <SingleplayerSettings />
+      ) : (
+        <Paper
+          sx={{
+            p: 1,
+            maxHeight: "20%",
+            overflow: "hidden",
+          }}
+        >
+          <MapSelect
+            maps={maps}
+            selectedMap={selectedMap}
+            setSelectedMap={handleSelectMap}
+          />
+        </Paper>
+      )}
+    </Box>
   );
 };
 
