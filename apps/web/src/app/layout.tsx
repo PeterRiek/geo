@@ -6,6 +6,8 @@ import { ThemeProvider } from "@mui/material/styles";
 import { CssBaseline } from "@mui/material";
 import theme from "@/theme";
 import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
+import { auth } from "@/auth";
+import AppShell from "@/components/layout/app-shell";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
@@ -19,11 +21,13 @@ export const metadata: Metadata = {
   description: "GeoGuessr But Free",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+
   return (
     <html lang="en" className={roboto.variable} suppressHydrationWarning style={{height:"100%"}}>
       <body style={{height:"100%"}}>
@@ -32,7 +36,9 @@ export default function RootLayout({
           <ThemeProvider theme={theme}>
             <CssBaseline />
 
-            {children}
+            <AppShell username={session?.user?.name ?? null}>
+              {children}
+            </AppShell>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>

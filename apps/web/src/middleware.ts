@@ -10,6 +10,41 @@ interface CanPlayResponse {
   maxGamesPerDay: number;
 }
 
+type ServerStatusOutcome = "ok" | "starting" | "error";
+
+const SERVER_STATUS_CACHE_MS = 5_000;
+let serverStatusCache: { outcome: ServerStatusOutcome; checkedAt: number } | null = null;
+
+const checkServerStatus = async (): Promise<ServerStatusOutcome> => {
+  const now = Date.now();
+  if (serverStatusCache && now - serverStatusCache.checkedAt < SERVER_STATUS_CACHE_MS) {
+    return serverStatusCache.outcome;
+  }
+
+  let outcome: ServerStatusOutcome;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3_000);
+
+    const serverResp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/status`, {
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+    outcome = serverResp.ok ? "ok" : "starting";
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      outcome = "starting";
+    } else {
+      console.error("Error checking server status", error);
+      outcome = "error";
+    }
+  }
+
+  serverStatusCache = { outcome, checkedAt: now };
+  return outcome;
+};
+
 const middleware = async (request: NextRequest) => {
   const session = await auth();
 
@@ -31,31 +66,16 @@ const middleware = async (request: NextRequest) => {
     pathname.endsWith(".ico");
 
   if (!pathname.startsWith("/server-starting") && !isStaticAsset) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3_000);
+    const outcome = await checkServerStatus();
 
-      const serverResp = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/status`,
-        { signal: controller.signal }
-      );
+    if (outcome === "starting") {
+      const serverStartingUrl = new URL("/server-starting", request.url);
+      serverStartingUrl.searchParams.set("from", pathname + request.nextUrl.search);
+      return NextResponse.redirect(serverStartingUrl);
+    }
 
-      clearTimeout(timeout);
-
-      if (!serverResp.ok) {
-        const serverStartingUrl = new URL("/server-starting", request.url);
-        serverStartingUrl.searchParams.set("from", pathname + request.nextUrl.search);
-        return NextResponse.redirect(serverStartingUrl);
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        const serverStartingUrl = new URL("/server-starting", request.url);
-        serverStartingUrl.searchParams.set("from", pathname + request.nextUrl.search);
-        return NextResponse.redirect(serverStartingUrl);
-      } else {
-        console.error("Error checking server status", error);
-        return NextResponse.redirect(new URL("/error", request.url));
-      }
+    if (outcome === "error") {
+      return NextResponse.redirect(new URL("/error", request.url));
     }
   }
 

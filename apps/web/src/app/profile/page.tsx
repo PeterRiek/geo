@@ -81,7 +81,7 @@ const ProfilePage = () => {
         justifyContent: "center",
         alignItems: "center",
         flexDirection: "column",
-        height: "100svh",
+        height: "100%",
         p: 4,
       }}
     >
