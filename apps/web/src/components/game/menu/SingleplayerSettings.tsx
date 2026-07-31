@@ -31,9 +31,6 @@ const SingleplayerSettings: React.FC<any> = ({
       alignItems: "center",
     }}
   >
-    <Typography variant="h4" gutterBottom>
-      Singleplayer
-    </Typography>
     <Container
       sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}
     >

@@ -1,17 +1,22 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Box,
   Button,
   Container,
+  IconButton,
+  InputAdornment,
   Paper,
+  Snackbar,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import MapSelect from "./MapSelect";
 import NMPZSelect from "./NMPZSelect";
 
@@ -37,7 +42,44 @@ const MultiplayerSettings: React.FC<any> = ({
   roomError,
   roundCount,
   setRoundCount,
-}) => (
+}) => {
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+
+  const copyWithFallback = (text: string): boolean => {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const succeeded = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return succeeded;
+  };
+
+  const handleCopyInviteLink = async () => {
+    const link = `${window.location.origin}/game/play/mp?roomId=${roomId}`;
+
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(link);
+        setLinkCopied(true);
+        return;
+      } catch {
+        // fall through to the legacy fallback below
+      }
+    }
+
+    if (copyWithFallback(link)) {
+      setLinkCopied(true);
+    } else {
+      setCopyError(true);
+    }
+  };
+
+  return (
   <Box
     sx={{
       height: "80%",
@@ -48,9 +90,6 @@ const MultiplayerSettings: React.FC<any> = ({
       alignItems: "center",
     }}
   >
-    <Typography variant="h4" gutterBottom>
-      Multiplayer
-    </Typography>
 
     <ToggleButtonGroup
       value={multiplayer}
@@ -114,6 +153,26 @@ const MultiplayerSettings: React.FC<any> = ({
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
               fullWidth
+              helperText="Share this code, or copy an invite link for your friends"
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title="Copy invite link">
+                        <span>
+                          <IconButton
+                            onClick={handleCopyInviteLink}
+                            disabled={!roomId}
+                            edge="end"
+                          >
+                            <ContentCopyIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
           </Paper>
           {roomError && <Alert severity="error">{roomError}</Alert>}
@@ -137,7 +196,24 @@ const MultiplayerSettings: React.FC<any> = ({
         </>
       )}
     </Container>
+
+    <Snackbar
+      open={linkCopied}
+      autoHideDuration={2000}
+      onClose={() => setLinkCopied(false)}
+      message="Invite link copied!"
+    />
+    <Snackbar
+      open={copyError}
+      autoHideDuration={3000}
+      onClose={() => setCopyError(false)}
+    >
+      <Alert severity="error" onClose={() => setCopyError(false)}>
+        Couldn&apos;t copy the link. Please copy the Room ID manually.
+      </Alert>
+    </Snackbar>
   </Box>
-);
+  );
+};
 
 export default MultiplayerSettings;

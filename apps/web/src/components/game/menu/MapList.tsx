@@ -36,6 +36,7 @@ const MapList: React.FC<{
         maxHeight: "100%",
         width: "100%",
         gap: 1,
+		paddingBottom: 1,
         boxSizing: "border-box",
         position: "relative",
       }}

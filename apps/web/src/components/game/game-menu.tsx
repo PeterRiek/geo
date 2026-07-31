@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Divider } from "@mui/material";
 import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
+import { generateRoomCode } from "@/lib/room-code";
 import ModeSelect from "./menu/ModeSelect";
 import SingleplayerSettings from "./menu/SingleplayerSettings";
 import MultiplayerSettings from "./menu/MultiplayerSettings";
@@ -54,6 +55,12 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   useEffect(() => {
     if (roomError) setIsCreatingRoom(false);
   }, [roomError]);
+
+  useEffect(() => {
+    if (mode === "multiplayer" && multiplayer === "create" && !roomId) {
+      setRoomId(generateRoomCode());
+    }
+  }, [mode, multiplayer, roomId]);
 
   useEffect(() => {
     const loadMaps = async () => {

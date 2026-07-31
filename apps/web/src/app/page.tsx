@@ -2,28 +2,37 @@
 
 import { auth } from "@/auth";
 import { MAPS_ERROR_PARAM } from "@/lib/maps";
-import SignOutButton from "@/components/auth/sing-out-button";
+import LoginForm from "@/components/auth/login-form";
 import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
-import LoginIcon from "@mui/icons-material/Login";
-import {
-  Alert,
-  Avatar,
-  Button,
-  Container,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import { Alert, Button, Container, Paper, Typography } from "@mui/material";
 
 interface HomePageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+interface CanPlayData {
+  gamesPlayedToday: number;
+  canPlay: boolean;
+  maxGamesPerDay: number;
 }
 
 const HomePage = async ({ searchParams }: HomePageProps) => {
   const session = await auth();
   const params = await searchParams;
   const showMapsError = params[MAPS_ERROR_PARAM] === "1";
+
+  let canPlay: CanPlayData | undefined;
+  if (session?.user) {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/can-play`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+        cache: "no-store",
+      });
+      if (res.ok) canPlay = await res.json();
+    } catch {
+      // fall back to CTA without a play count below
+    }
+  }
 
   return (
     <Container
@@ -43,36 +52,45 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
           try again later.
         </Alert>
       )}
-      {session?.user?.image && (
-        <Avatar
-          src={session?.user?.image}
-          alt="Avatar"
-          sx={{ width: "10%", height: "10%" }}
-        />
-      )}
-      <Typography variant="h2" textAlign={"center"}>
-        {session?.user
-          ? `Welcome ${session.user.name}`
-          : "Please sign in first"}
-      </Typography>
       {session?.user ? (
-        <Paper sx={{ p: 1 }}>
-          <Stack>
-            <Button endIcon={<AccountCircleIcon />} href="/profile">
-              Profile
-            </Button>
-            <Button endIcon={<SportsEsportsIcon />} href="/game">
-              Game
-            </Button>
-            <SignOutButton />
-          </Stack>
+        <Paper
+          elevation={3}
+          sx={{
+            width: "100%",
+            maxWidth: 480,
+            p: 4,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <Typography variant="h4" textAlign="center" fontWeight={500}>
+            Welcome back, {session.user.name}
+          </Typography>
+          {canPlay && (
+            <Typography variant="body2" color="text.secondary">
+              {canPlay.gamesPlayedToday}
+              {canPlay.maxGamesPerDay >= 0 ? ` / ${canPlay.maxGamesPerDay}` : " / unlimited"}{" "}
+              games played today
+            </Typography>
+          )}
+          <Button
+            href="/game"
+            variant="contained"
+            size="large"
+            endIcon={<SportsEsportsIcon />}
+            sx={{ px: 6 }}
+          >
+            Play
+          </Button>
         </Paper>
       ) : (
-        <Paper sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1 }}>
-          <Button endIcon={<LoginIcon />} href="/login">
-            Sign In
-          </Button>
-          <Button href="/register">Create Account</Button>
+        <Paper elevation={3} sx={{ width: "100%", maxWidth: 480, p: 4 }}>
+          <Typography variant="h5" component="h1" gutterBottom>
+            Sign in to play
+          </Typography>
+          <LoginForm />
         </Paper>
       )}
     </Container>
