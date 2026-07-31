@@ -27,7 +27,6 @@ const PostgameView: React.FC<Props> = ({
   const handleChange = (event: SelectChangeEvent<number>): void => {
     setRound(event.target.value);
   };
-  console.log(allGuesses)
   return (
     <Box
       sx={{

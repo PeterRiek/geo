@@ -1,5 +1,6 @@
 "use client";
 import { Coords } from "@/types/geo";
+import { handleMapsError, installMapsAuthFailureHandler } from "@/lib/maps";
 import { Loader } from "@googlemaps/js-api-loader";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -20,36 +21,49 @@ const StreetViewPano: React.FC<StreetViewPanoProps> = ({
   const [heading, setHeading] = useState(0);
 
   useEffect(() => {
+    installMapsAuthFailureHandler();
+
     const loader = new Loader({
       apiKey: process.env.NEXT_PUBLIC_MAPS_KEY!,
       version: "weekly",
     });
 
-    loader.load().then(() => {
-      const panorama = new google.maps.StreetViewPanorama(
-        containerRef.current as HTMLDivElement,
-        {
-          position: location,
-          pov: {
-            heading: 34,
-            pitch: 10,
-          },
-          zoom: 1,
-          disableDefaultUI: true,
-          showRoadLabels: false,
-          clickToGo: moveEnabled ?? true,
-          scrollwheel: zoomEnabled ?? true,
-          disableDoubleClickZoom: zoomEnabled === false,
-          motionTrackingControl: false,
-          motionTracking: false,
-        }
-      );
+    loader
+      .load()
+      .then(() => {
+        const panorama = new google.maps.StreetViewPanorama(
+          containerRef.current as HTMLDivElement,
+          {
+            position: location,
+            pov: {
+              heading: 34,
+              pitch: 10,
+            },
+            zoom: 1,
+            disableDefaultUI: true,
+            showRoadLabels: false,
+            clickToGo: moveEnabled ?? true,
+            scrollwheel: zoomEnabled ?? true,
+            disableDoubleClickZoom: zoomEnabled === false,
+            motionTrackingControl: false,
+            motionTracking: false,
+          }
+        );
 
-      panorama.addListener("pov_changed", () => {
-        const pov = panorama.getPov();
-        setHeading(pov.heading);
+        panorama.addListener("pov_changed", () => {
+          const pov = panorama.getPov();
+          setHeading(pov.heading);
+        });
+
+        panorama.addListener("status_changed", () => {
+          if (panorama.getStatus() !== google.maps.StreetViewStatus.OK) {
+            handleMapsError();
+          }
+        });
+      })
+      .catch(() => {
+        handleMapsError();
       });
-    });
   }, [location]);
 
   return (

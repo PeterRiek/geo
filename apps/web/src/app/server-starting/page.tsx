@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Button, Typography } from "@mui/material";
 
-export default function ServerStartingPage() {
+function ServerStartingContent() {
   const [serverOnline, setServerOnline] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from") || "/";
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -34,7 +36,7 @@ export default function ServerStartingPage() {
 
   const handleContinue = () => {
     setRedirecting(true);
-    router.push("/"); // TODO: redirect to origin
+    router.push(from);
   };
 
   return (
@@ -67,5 +69,13 @@ export default function ServerStartingPage() {
         Connect
       </Button>
     </Box>
+  );
+}
+
+export default function ServerStartingPage() {
+  return (
+    <Suspense fallback={null}>
+      <ServerStartingContent />
+    </Suspense>
   );
 }

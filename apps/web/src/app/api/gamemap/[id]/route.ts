@@ -21,7 +21,6 @@ export async function GET(
     );
 
     const data = await backendRes.json();
-    console.log(data);
 
     return NextResponse.json(data, { status: backendRes.status });
   } catch (error) {

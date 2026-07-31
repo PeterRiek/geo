@@ -5,6 +5,8 @@ import { Coords } from "@/types/geo";
 import {
   Box,
   Button,
+  Chip,
+  Paper,
   Stack,
   Typography,
   useMediaQuery,
@@ -52,7 +54,6 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
 
   useEffect(() => {
     if (!gameState || !gameState.roomPhase) return;
-    console.log(prevGamePhase, "->", gameState.roomPhase);
     if (prevGamePhase == "" && gameState.roomPhase == "ROUND_IN_PROGRESS") {
       initRound();
     }
@@ -158,13 +159,26 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         <Typography variant="h1" textAlign="center">
           Waiting to start...
         </Typography>
+        <Paper sx={{ p: 2, minWidth: 240 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Players ({gameState.players?.length ?? 0})
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {gameState.players?.map((player) => (
+              <Chip
+                key={player}
+                label={player === username ? `${player} (you)` : player}
+                color={player === username ? "primary" : "default"}
+              />
+            ))}
+          </Stack>
+        </Paper>
         <Button onClick={() => start()} variant="contained" size="large">
           Start Game
         </Button>
       </Box>
     );
 
-  console.log(gameSettings, gameState);
   if (
     gameState.roomPhase == "ROUND_IN_PROGRESS" &&
     gameState.allTargets[gameState.roundCount]

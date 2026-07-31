@@ -1,5 +1,6 @@
 package me.peterrk.pan.backend.dto.ws;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -17,4 +18,5 @@ public class RoomState {
   public List<LatLng> allTargets;
   public List<Map<String, LatLng>> allGuesses;
   public int roundCount;
+  public List<String> players = new ArrayList<>();
 }

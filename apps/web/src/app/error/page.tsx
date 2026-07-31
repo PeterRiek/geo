@@ -1,14 +1,9 @@
 "use client";
 
-import { logout } from "@/lib/actions/auth";
-import { Box, CircularProgress, Typography } from "@mui/material";
-import React, { useEffect } from "react";
+import { Box, Button, Typography } from "@mui/material";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 
-const SessionExpiredPage = () => {
-  useEffect(() => {
-    logout();
-  }, []);
-
+export default function ErrorPage() {
   return (
     <Box
       sx={{
@@ -22,15 +17,16 @@ const SessionExpiredPage = () => {
         p: 4,
       }}
     >
+      <ErrorOutlineIcon color="error" sx={{ fontSize: 64 }} />
       <Typography variant="h4" fontWeight={500}>
-        Your session has expired
+        Something went wrong
       </Typography>
       <Typography variant="body1" color="text.secondary">
-        Please sign in again to continue.
+        We ran into a problem talking to the server. Please try again.
       </Typography>
-      <CircularProgress size={32} />
+      <Button variant="contained" size="large" href="/">
+        Back to Home
+      </Button>
     </Box>
   );
-};
-
-export default SessionExpiredPage;
+}

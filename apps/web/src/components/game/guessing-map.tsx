@@ -1,4 +1,5 @@
 import { createImageMarker } from "@/lib/maputil";
+import { handleMapsError, installMapsAuthFailureHandler } from "@/lib/maps";
 import { Coords } from "@/types/geo";
 import { Loader } from "@googlemaps/js-api-loader";
 import React, { useEffect, useRef, useState } from "react";
@@ -53,6 +54,8 @@ const Map: React.FC<MapProps> = ({
 
   useEffect(() => {
     const initMap = async () => {
+      installMapsAuthFailureHandler();
+
       const loader = new Loader({
         apiKey: process.env.NEXT_PUBLIC_MAPS_KEY!,
         version: "weekly",
@@ -76,7 +79,7 @@ const Map: React.FC<MapProps> = ({
       setMapReady(true);
     };
 
-    initMap();
+    initMap().catch(() => handleMapsError());
   }, []);
 
   // Dynamic map click listener

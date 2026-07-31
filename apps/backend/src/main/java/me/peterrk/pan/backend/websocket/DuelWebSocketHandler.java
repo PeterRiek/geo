@@ -59,8 +59,7 @@ public class DuelWebSocketHandler extends TextWebSocketHandler {
           session.sendMessage(new TextMessage(mapper.writeValueAsBytes(response)));
           return;
         }
-        ServerMessage response = new ServerMessage("JOINED_ROOM", roomState);
-        session.sendMessage(new TextMessage(mapper.writeValueAsString(response)));
+        duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("JOINED_ROOM", roomState));
       }
 
       case "GUESS" -> {

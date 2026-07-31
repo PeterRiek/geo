@@ -4,6 +4,12 @@ import { auth } from "@/auth";
 
 const protectedRoutes = ["/profile", "/game"];
 
+interface CanPlayResponse {
+  canPlay: boolean;
+  gamesPlayedToday: number;
+  maxGamesPerDay: number;
+}
+
 const middleware = async (request: NextRequest) => {
   const session = await auth();
 
@@ -37,11 +43,15 @@ const middleware = async (request: NextRequest) => {
       clearTimeout(timeout);
 
       if (!serverResp.ok) {
-        return NextResponse.redirect(new URL("/server-starting", request.url));
+        const serverStartingUrl = new URL("/server-starting", request.url);
+        serverStartingUrl.searchParams.set("from", pathname + request.nextUrl.search);
+        return NextResponse.redirect(serverStartingUrl);
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        return NextResponse.redirect(new URL("/server-starting", request.url));
+        const serverStartingUrl = new URL("/server-starting", request.url);
+        serverStartingUrl.searchParams.set("from", pathname + request.nextUrl.search);
+        return NextResponse.redirect(serverStartingUrl);
       } else {
         console.error("Error checking server status", error);
         return NextResponse.redirect(new URL("/error", request.url));
@@ -68,8 +78,7 @@ const middleware = async (request: NextRequest) => {
         return NextResponse.redirect(new URL("/error", request.url));
       }
 
-      const data = await res.json();
-      // TODO: match type with api dto
+      const data: CanPlayResponse = await res.json();
 
       if (!data.canPlay) {
         return NextResponse.redirect(new URL("/limit-reached", request.url));

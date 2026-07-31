@@ -1,4 +1,5 @@
 import { createImageMarker } from "@/lib/maputil";
+import { handleMapsError, installMapsAuthFailureHandler } from "@/lib/maps";
 import { Coords } from "@/types/geo";
 import { Loader } from "@googlemaps/js-api-loader";
 import React, { useEffect, useRef } from "react";
@@ -33,6 +34,8 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
 
   useEffect(() => {
     const initMap = async () => {
+      installMapsAuthFailureHandler();
+
       const loader = new Loader({
         apiKey: process.env.NEXT_PUBLIC_MAPS_KEY!,
         version: "weekly",
@@ -109,7 +112,7 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
       });
     };
 
-    initMap();
+    initMap().catch(() => handleMapsError());
   }, [center, zoom, guessLocation, targetLocation]);
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;

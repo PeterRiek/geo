@@ -25,6 +25,7 @@ public class DuelGameService {
 
   private final Map<String, RoomState> rooms = new ConcurrentHashMap<>();
   private final Map<String, Set<WebSocketSession>> roomSessions = new ConcurrentHashMap<>();
+  private final Map<String, Set<String>> roomPlayers = new ConcurrentHashMap<>();
 
   public DuelGameService(GameMapService gameMapService) {
     this.gameMapService = gameMapService;
@@ -53,8 +54,15 @@ public class DuelGameService {
   }
 
   public RoomState joinRoom(String roomId, String username, WebSocketSession session) {
+    RoomState room = rooms.get(roomId);
+    if (room == null) {
+      return null;
+    }
     roomSessions.computeIfAbsent(roomId, id -> ConcurrentHashMap.newKeySet()).add(session);
-    return getRoomState(roomId);
+    Set<String> players = roomPlayers.computeIfAbsent(roomId, id -> ConcurrentHashMap.newKeySet());
+    players.add(username);
+    room.players = new ArrayList<>(players);
+    return room;
   }
 
   public void submitGuess(String roomId, String username, LatLng guess) {
@@ -102,6 +110,7 @@ public class DuelGameService {
 
   public void closeRoom(String roomId) {
     rooms.remove(roomId);
+    roomPlayers.remove(roomId);
     Set<WebSocketSession> sessions = roomSessions.remove(roomId);
     if (sessions != null) {
       for (WebSocketSession session : sessions) {

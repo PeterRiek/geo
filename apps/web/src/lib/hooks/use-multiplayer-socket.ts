@@ -18,6 +18,7 @@ interface GameState {
   roomSettings: GameSettings;
   allTargets: Coords[];
   allGuesses: { [username: string]: Coords }[];
+  players: string[];
 }
 
 const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
@@ -43,7 +44,6 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
-      console.log("ws.onmessage", message);
       switch (message.type) {
         case "JOINED_ROOM":
           setGameState(message.payload);
@@ -73,7 +73,6 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
         payload: settings,
       })
     );
-    console.log("create room", _roomId)
   };
 
   const join = () => {
@@ -104,7 +103,6 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
   };
 
   const submitGuess = (guess: Coords) => {
-    console.log("submitGuess", guess)
     socketRef.current?.send(
       JSON.stringify({
         type: "GUESS",

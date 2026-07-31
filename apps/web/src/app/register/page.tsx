@@ -14,7 +14,7 @@ import {
   Paper,
 } from "@mui/material";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,19 +23,47 @@ export default function LoginPage() {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
+    const username = data.get("username");
+    const password = data.get("password");
+    const confirmPassword = data.get("confirmPassword");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
 
     setLoading(true);
-    const res = await signIn("credentials", {
-      username: data.get("username"),
-      password: data.get("password"),
+    setError("");
+
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (res.status === 409) {
+      setLoading(false);
+      setError("Username already exists");
+      return;
+    }
+
+    if (!res.ok) {
+      setLoading(false);
+      setError("Failed to create account");
+      return;
+    }
+
+    const signInRes = await signIn("credentials", {
+      username,
+      password,
       redirect: false,
     });
 
-    if (res && !res.error) {
+    if (signInRes && !signInRes.error) {
       router.push("/");
     } else {
       setLoading(false);
-      setError("Invalid username or password");
+      router.push("/login");
     }
   };
 
@@ -43,7 +71,7 @@ export default function LoginPage() {
     <Container maxWidth="sm" sx={{ height: "100%", p: 4 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h5" component="h1" gutterBottom>
-          Login
+          Create Account
         </Typography>
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <TextField
@@ -64,6 +92,15 @@ export default function LoginPage() {
             type="password"
             id="password"
           />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="confirmPassword"
+            label="Confirm Password"
+            type="password"
+            id="confirmPassword"
+          />
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}
@@ -77,10 +114,10 @@ export default function LoginPage() {
             loading={loading}
             sx={{ mt: 2 }}
           >
-            Login
+            Create Account
           </Button>
-          <Button component={Link} href="/register" fullWidth sx={{ mt: 1 }}>
-            Need an account? Sign up
+          <Button component={Link} href="/login" fullWidth sx={{ mt: 1 }}>
+            Already have an account? Sign in
           </Button>
         </Box>
       </Paper>
