@@ -1,13 +1,20 @@
 import { auth } from "@/auth";
 import MultiplayerGame from "@/components/game/multiplayer/mutliplayer-game";
+import GameFallback from "@/components/game/game-fallback";
 import React from "react";
 
 const PlayMultiPlayerPage = async () => {
   const session = await auth();
 
-  if (!session) return <div>Missing session</div>;
-  if (!session.accessToken) return <div>Missing Accesstoken</div>;
-  if (!session.user.name) return <div>Missing username</div>;
+  if (!session || !session.accessToken || !session.user.name) {
+    return (
+      <GameFallback
+        variant="error"
+        title="You need to be signed in to play."
+        description="Please sign in and try again."
+      />
+    );
+  }
 
   return (
     <MultiplayerGame

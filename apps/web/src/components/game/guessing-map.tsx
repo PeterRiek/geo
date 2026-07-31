@@ -47,7 +47,7 @@ const Map: React.FC<MapProps> = ({
       clickMarkerRef.current = new AdvancedMarkerElement({
         map: mapInstanceRef.current,
         position,
-        content: createImageMarker("/icons/marker-guess.png", "marker-guess"),
+        content: createImageMarker("/icons/marker-guess.png", "Your guess"),
       });
     }
   };
@@ -126,7 +126,7 @@ const Map: React.FC<MapProps> = ({
         targetMarkerRef.current = new AdvancedMarkerElement({
           map: mapInstanceRef.current,
           position: targetLocation,
-          content: createImageMarker("/icons/marker-target.png", "marker-target"),
+          content: createImageMarker("/icons/marker-target.png", "Actual location"),
         });
       }
     } else if (targetMarkerRef.current) {

@@ -2,6 +2,7 @@
 
 import React from "react";
 import {
+  Alert,
   Box,
   Button,
   Container,
@@ -32,6 +33,8 @@ const MultiplayerSettings: React.FC<any> = ({
   multiplayer,
   setMultiplayer,
   createRoom,
+  isCreatingRoom,
+  roomError,
   roundCount,
   setRoundCount,
 }) => (
@@ -113,6 +116,7 @@ const MultiplayerSettings: React.FC<any> = ({
               fullWidth
             />
           </Paper>
+          {roomError && <Alert severity="error">{roomError}</Alert>}
           <Button
             onClick={() => {
               createRoom(roomId, {
@@ -123,10 +127,10 @@ const MultiplayerSettings: React.FC<any> = ({
                 roundCount: roundCount,
               });
             }}
-            href={`/game/play/mp?roomId=${roomId}`}
             variant="contained"
             fullWidth
-            disabled={!selectedMap || !roomId}
+            loading={isCreatingRoom}
+            disabled={!selectedMap || !roomId || isCreatingRoom}
           >
             Create Game
           </Button>

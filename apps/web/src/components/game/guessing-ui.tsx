@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Button, useMediaQuery, useTheme } from "@mui/material";
-import React from "react";
+import React, { useState } from "react";
 
 import Map from "@/components/game/guessing-map";
 import { Coords } from "@/types/geo";
@@ -27,6 +27,7 @@ const GuessrUI: React.FC<{
 }) => {
   const theme = useTheme();
   const isSm = useMediaQuery(theme.breakpoints.between("sm", "md"));
+  const [pulsing, setPulsing] = useState(false);
 
   let normalWidth = "20%";
   let normalHeight = "20%";
@@ -108,11 +109,23 @@ const GuessrUI: React.FC<{
               sx={{ width: "100%", mt: 0.5 }}
             >
               <Button
-                onClick={onGuess}
+                onClick={() => {
+                  setPulsing(true);
+                  onGuess();
+                }}
+                onAnimationEnd={() => setPulsing(false)}
                 variant="contained"
                 disabled={guessingDisabled}
                 autoFocus
                 fullWidth
+                sx={{
+                  animation: pulsing ? "guess-pulse 0.3s ease" : undefined,
+                  "@keyframes guess-pulse": {
+                    "0%": { transform: "scale(1)" },
+                    "50%": { transform: "scale(0.94)" },
+                    "100%": { transform: "scale(1)" },
+                  },
+                }}
               >
                 {buttonLabel ?? "GUESS"}
               </Button>

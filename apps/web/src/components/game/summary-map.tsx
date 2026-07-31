@@ -64,14 +64,14 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
       targetMarkerRef.current = new AdvancedMarkerElement({
         map,
         position: targetLocation,
-        content: createImageMarker("/icons/marker-target.png", "marker-target"),
+        content: createImageMarker("/icons/marker-target.png", "Actual location"),
       });
 
       if (guessLocation) {
         guessMarkerRef.current = new AdvancedMarkerElement({
           map,
           position: guessLocation,
-          content: createImageMarker("/icons/marker-guess.png", "marker-guess"),
+          content: createImageMarker("/icons/marker-guess.png", "Your guess"),
         });
 
         lineRef.current = [];
@@ -95,7 +95,7 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
             position,
             content: createImageMarker(
               "/icons/marker-opponent.png",
-              "marker-opponent"
+              "Opponent's guess"
             ),
           })
         );

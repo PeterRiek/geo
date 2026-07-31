@@ -2,6 +2,7 @@ import { Box, Button, Paper, Typography } from "@mui/material";
 import { Coords } from "@/types/geo";
 import { formatDistance } from "@/lib/geo";
 import SummaryMap from "@/components/game/summary-map";
+import AnimatedScore from "@/components/game/animated-score";
 
 interface Props {
   score: number;
@@ -39,9 +40,7 @@ const RoundResultView: React.FC<Props> = ({
     }}
   >
     <Paper sx={{ p: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <Typography variant="h2" fontWeight={500} color="primary">
-        {score}
-      </Typography>
+      <AnimatedScore value={score} variant="h2" fontWeight={500} color="primary" />
       <Typography>
         You were {formatDistance(distance)} away
       </Typography>

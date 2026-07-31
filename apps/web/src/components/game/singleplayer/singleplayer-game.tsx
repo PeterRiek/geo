@@ -1,14 +1,15 @@
 "use client";
 
 import { Coords } from "@/types/geo";
-import { Box, CircularProgress, useMediaQuery, useTheme } from "@mui/material";
+import { Fade, useMediaQuery, useTheme } from "@mui/material";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
 import RoundResultView from "@/components/game/singleplayer/views/round-result-view";
 import PregameView from "@/components/game/singleplayer/views/pregame-view";
 import InGameView from "@/components/game/singleplayer/views/ingame-view";
 import PostgameView from "@/components/game/singleplayer/views/postgame-view";
+import GameFallback from "@/components/game/game-fallback";
 
 export type GamePhase = "PREGAME" | "INGAME" | "ROUND_RESULT" | "POSTGAME";
 
@@ -30,13 +31,14 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const phaseContainerRef = useRef<HTMLDivElement>(null);
 
   const [gamePhase, setGamePhase] = useState<GamePhase>("PREGAME");
   const [gameRoundCount, setGameRoundCount] = useState(0);
   const [targetLocation, setTargetLocation] = useState<Coords>();
   const [guessLocation, setGuessLocation] = useState<Coords>();
   const [roundFinished, setRoundFinished] = useState(true);
-  const [loadingTargetLocation, setLoadingTargetLocation] = useState(false);
+  const [locationLoadError, setLocationLoadError] = useState(false);
   const [allGuesses, setAllGuesses] = useState<
     { [username: string]: Coords }[]
   >([]);
@@ -55,16 +57,32 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
     startGameSession();
   }, [accessToken, playSet]);
 
+  useEffect(() => {
+    phaseContainerRef.current?.focus();
+  }, [gamePhase]);
+
+  useEffect(() => {
+    const isActiveGame = gamePhase === "INGAME" || gamePhase === "ROUND_RESULT";
+    if (!isActiveGame) return;
+
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [gamePhase]);
+
   const fetchNextLocation = async () => {
     try {
-      setLoadingTargetLocation(true);
+      setLocationLoadError(false);
       const res = await fetch(`/api/gamemap/${playSet.mapId}/locations/random`);
       if (!res.ok) throw new Error("Failed to fetch target location");
       const data = await res.json();
       setTargetLocation(data);
-      setLoadingTargetLocation(false);
     } catch (err) {
       console.error("Error fetching location:", err);
+      setLocationLoadError(true);
     }
   };
 
@@ -107,29 +125,27 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
     gameNextPhase();
   };
 
+  let content: React.ReactNode;
+  let phaseKey = gamePhase;
+
   if (gamePhase === "PREGAME") {
-    return <PregameView playSet={playSet} onStart={gameNextPhase} />;
-  }
-
-  if (!targetLocation) {
-    if (loadingTargetLocation) {
-      return (
-        <Box
-          height="100%"
-          display="flex"
-          flexDirection="column"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <CircularProgress size={64} />
-        </Box>
+    content = <PregameView playSet={playSet} onStart={gameNextPhase} />;
+  } else if (!targetLocation) {
+    phaseKey = `${gamePhase}-loading` as GamePhase;
+    if (locationLoadError) {
+      content = (
+        <GameFallback
+          variant="error"
+          title="Couldn't load a location"
+          description="Something went wrong fetching the next round. Please try again."
+          onRetry={fetchNextLocation}
+        />
       );
+    } else {
+      content = <GameFallback variant="loading" title="Loading round..." />;
     }
-    return <div>Error: No target location loaded.</div>;
-  }
-
-  if (gamePhase === "INGAME") {
-    return (
+  } else if (gamePhase === "INGAME") {
+    content = (
       <InGameView
         isMobile={isMobile}
         targetLocation={targetLocation}
@@ -140,19 +156,21 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
         moveEnabled={playSet.allowMove}
         panEnabled={playSet.allowPan}
         zoomEnabled={playSet.allowZoom}
+        round={gameRoundCount}
+        totalRounds={playSet.roundCount}
       />
     );
-  }
-
-  if (!guessLocation) return <div>Error: No guess location.</div>;
-
-  if (gamePhase === "ROUND_RESULT") {
+  } else if (!guessLocation) {
+    content = (
+      <GameFallback variant="error" title="No guess was recorded for this round." />
+    );
+  } else if (gamePhase === "ROUND_RESULT") {
     const distance = getDistanceInKm(guessLocation, targetLocation);
     const score = getGuessrScore(distance, 10_000);
     const center = getCenterCoords(guessLocation, targetLocation);
     const zoom = 1 + (score / 5000) * 8;
 
-    return (
+    content = (
       <RoundResultView
         score={score}
         distance={distance}
@@ -161,22 +179,32 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
         center={center}
         zoom={zoom}
         onNext={gameNextPhase}
-        isFinalRound={gameRoundCount >= 5}
+        isFinalRound={gameRoundCount >= playSet.roundCount}
       />
     );
-  }
-
-  if (gamePhase === "POSTGAME") {
-    return (
+  } else if (gamePhase === "POSTGAME") {
+    content = (
       <PostgameView
         allGuesses={allGuesses}
         allTargets={allTargets}
         username={username}
       />
     );
+  } else {
+    content = <GameFallback variant="error" title="Unknown game state." />;
   }
 
-  return <div>Unknown game state</div>;
+  return (
+    <Fade in key={phaseKey} timeout={300}>
+      <div
+        ref={phaseContainerRef}
+        tabIndex={-1}
+        style={{ height: "100%", outline: "none" }}
+      >
+        {content}
+      </div>
+    </Fade>
+  );
 };
 
 export default SinglePlayerGame;

@@ -58,7 +58,9 @@ const PregameView: React.FC<Props> = ({ playSet, onStart }) => {
           <Typography variant="h3" textAlign="center" fontWeight={500}>
             {mapName ?? playSet.mapId}
           </Typography>
-          <Typography>{playSet.roundCount}</Typography>
+          <Typography color="text.secondary">
+            {playSet.roundCount} {playSet.roundCount === 1 ? "Round" : "Rounds"}
+          </Typography>
         </Stack>
         <Stack direction="row" spacing={1}>
           <Chip

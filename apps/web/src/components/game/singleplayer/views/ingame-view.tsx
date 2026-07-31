@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import GuessrMobileUI from "@/components/game/guessing-ui-mobile";
 import GuessrUI from "@/components/game/guessing-ui";
 import StreetViewPano from "@/components/game/street-view-pano";
+import RoundHud from "@/components/game/round-hud";
 import { Coords } from "@/types/geo";
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   moveEnabled?: boolean;
   panEnabled?: boolean;
   zoomEnabled?: boolean;
+  round?: number;
+  totalRounds?: number;
 }
 
 const InGameView: React.FC<Props> = ({
@@ -30,10 +33,21 @@ const InGameView: React.FC<Props> = ({
   moveEnabled,
   panEnabled,
   zoomEnabled,
+  round,
+  totalRounds,
 }) => {
+  const buttonLabel = roundFinished
+    ? "DONE"
+    : guessLocation
+    ? "GUESS"
+    : "PLACE YOUR PIN";
+
   return (
     <>
-      <Box sx={{ width: "100%", height: "100%" }}>
+      <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
+        {round !== undefined && totalRounds !== undefined && (
+          <RoundHud round={round} totalRounds={totalRounds} />
+        )}
         <StreetViewPano
           location={targetLocation}
           moveEnabled={moveEnabled}
@@ -46,22 +60,22 @@ const InGameView: React.FC<Props> = ({
           targetLocation={targetLocation}
           targetVisible={targetVisible ?? roundFinished}
           guessLocation={guessLocation}
-          guessingDisabled={guessingDisabled ?? roundFinished}
+          guessingDisabled={guessingDisabled ?? (roundFinished || !guessLocation)}
+          mapClicksDisabled={roundFinished}
           onMapClick={onMapClick}
           onGuess={onGuess}
+          buttonLabel={buttonLabel}
         />
       ) : (
         <GuessrUI
           targetLocation={targetLocation}
           targetVisible={targetVisible ?? roundFinished}
-          guessingDisabled={guessingDisabled ?? roundFinished}
+          guessingDisabled={guessingDisabled ?? (roundFinished || !guessLocation)}
           guessLocation={guessLocation}
           mapClicksDisabled={roundFinished}
           onMapClick={onMapClick}
           onGuess={onGuess}
-          buttonLabel={
-            roundFinished ? "DONE" : guessLocation ? "GUESS" : "PLACE YOUR PIN"
-          }
+          buttonLabel={buttonLabel}
         />
       )}
     </>

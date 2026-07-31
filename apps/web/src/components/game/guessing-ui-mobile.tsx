@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Button, IconButton, Paper } from "@mui/material";
+import { Badge, Box, Button, IconButton, Paper } from "@mui/material";
 import React, { useRef, useState } from "react";
 import MapIcon from "@mui/icons-material/Map";
 
@@ -13,17 +13,22 @@ const GuessrMobileUI: React.FC<{
   targetVisible: boolean;
   guessLocation?: Coords;
   guessingDisabled: boolean;
+  mapClicksDisabled?: boolean;
   onMapClick: (c: Coords) => void;
   onGuess: () => void;
+  buttonLabel?: string;
 }> = ({
   targetLocation,
   targetVisible,
   guessLocation,
   guessingDisabled,
+  mapClicksDisabled,
   onMapClick,
   onGuess,
+  buttonLabel,
 }) => {
   const [mapVisible, setMapVisible] = useState(false);
+  const [pulsing, setPulsing] = useState(false);
   const zoomRef = useRef<number>(undefined);
   const centerRef = useRef<Coords>(undefined);
 
@@ -48,24 +53,32 @@ const GuessrMobileUI: React.FC<{
           <Paper
             sx={{ m: 5, p: 1, pointerEvents: "auto", borderRadius: "50%" }}
           >
-            <IconButton
-              sx={{
-                width: 72,
-                height: 72,
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setMapVisible(true);
-              }}
+            <Badge
+              color="success"
+              variant="dot"
+              invisible={!guessLocation}
+              overlap="circular"
+              anchorOrigin={{ vertical: "top", horizontal: "right" }}
             >
-              <MapIcon
-                fontSize="inherit"
+              <IconButton
                 sx={{
-                  width: "100%",
-                  height: "100%",
+                  width: 72,
+                  height: 72,
                 }}
-              />
-            </IconButton>
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMapVisible(true);
+                }}
+              >
+                <MapIcon
+                  fontSize="inherit"
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                  }}
+                />
+              </IconButton>
+            </Badge>
           </Paper>
         )}
 
@@ -96,6 +109,7 @@ const GuessrMobileUI: React.FC<{
                 targetLocation={targetLocation}
                 targetVisible={targetVisible}
                 guessLocation={guessLocation}
+                mapClicksDisabled={mapClicksDisabled}
                 onMapClick={onMapClick}
                 zoom={zoomRef.current}
                 onZoomChange={(zoom) => (zoomRef.current = zoom)}
@@ -117,7 +131,11 @@ const GuessrMobileUI: React.FC<{
               </Paper>
             </Box>
             <Button
-              onClick={onGuess}
+              onClick={() => {
+                setPulsing(true);
+                onGuess();
+              }}
+              onAnimationEnd={() => setPulsing(false)}
               variant="contained"
               disabled={guessingDisabled}
               sx={{
@@ -127,9 +145,15 @@ const GuessrMobileUI: React.FC<{
                 transform: "translateX(-50%)",
                 fontSize: 24,
                 pointerEvents: "auto",
+                animation: pulsing ? "guess-pulse-mobile 0.3s ease" : undefined,
+                "@keyframes guess-pulse-mobile": {
+                  "0%": { transform: "translateX(-50%) scale(1)" },
+                  "50%": { transform: "translateX(-50%) scale(0.94)" },
+                  "100%": { transform: "translateX(-50%) scale(1)" },
+                },
               }}
             >
-              GUESS
+              {buttonLabel ?? "GUESS"}
             </Button>
           </Box>
         )}

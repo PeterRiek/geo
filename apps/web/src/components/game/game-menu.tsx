@@ -1,15 +1,25 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Box, Divider } from "@mui/material";
 import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
 import ModeSelect from "./menu/ModeSelect";
 import SingleplayerSettings from "./menu/SingleplayerSettings";
 import MultiplayerSettings from "./menu/MultiplayerSettings";
 
+interface RoomSettings {
+  mapId: number;
+  allowMove: boolean;
+  allowPan: boolean;
+  allowZoom: boolean;
+  roundCount: number;
+}
+
 const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
 }) => {
+  const router = useRouter();
   const [maps, setMaps] = useState<{ id: number; name: string }[]>([]);
   const [mapsLoading, setMapsLoading] = useState(true);
   const [selectedMap, setSelectedMap] = useState<number>();
@@ -22,9 +32,28 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   const [panEnabled, setPanEnabled] = useState(true);
   const [zoomEnabled, setZoomEnabled] = useState(true);
   const [roundCount, setRoundCount] = useState(5);
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const scrollPositionRef = useRef<number>(0);
 
-  const { createRoom } = useMultiplayerSocket(undefined, accessToken);
+  const { createRoom, createdRoomId, roomError } = useMultiplayerSocket(
+    undefined,
+    accessToken
+  );
+
+  const handleCreateRoom = (id: string, settings: RoomSettings) => {
+    setIsCreatingRoom(true);
+    createRoom(id, settings);
+  };
+
+  useEffect(() => {
+    if (createdRoomId) {
+      router.push(`/game/play/mp?roomId=${createdRoomId}`);
+    }
+  }, [createdRoomId, router]);
+
+  useEffect(() => {
+    if (roomError) setIsCreatingRoom(false);
+  }, [roomError]);
 
   useEffect(() => {
     const loadMaps = async () => {
@@ -86,7 +115,9 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
             setRoomId,
             multiplayer,
             setMultiplayer,
-            createRoom,
+            createRoom: handleCreateRoom,
+            isCreatingRoom,
+            roomError,
             roundCount,
             setRoundCount,
           }}
