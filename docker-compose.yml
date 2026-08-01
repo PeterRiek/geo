@@ -31,7 +31,8 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/status || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
+      start_period: 60s
 
   web:
     build:

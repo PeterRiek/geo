@@ -36,7 +36,12 @@ const checkServerStatus = async (): Promise<ServerStatusOutcome> => {
     if (error instanceof DOMException && error.name === "AbortError") {
       outcome = "starting";
     } else {
-      console.error("Error checking server status", error);
+      const cause = error instanceof Error ? error.cause : undefined;
+      console.error(
+        "Error checking server status",
+        error,
+        cause ? `cause: ${cause}` : ""
+      );
       outcome = "error";
     }
   }
