@@ -71,7 +71,7 @@ public class DuelWebSocketHandler extends TextWebSocketHandler {
         LatLng guess = mapper.convertValue(msg.payload, LatLng.class);
         duelGameService.submitGuess(msg.roomId, username, guess);
         RoomState updated = duelGameService.getRoomState(msg.roomId);
-        if (updated.allGuesses.get(updated.roundCount).size() >= 2) {
+        if (updated.allGuesses.get(updated.roundCount).size() >= updated.players.size()) {
           if (updated.roundCount >= updated.roomSettings.roundCount - 1) {
             updated.roomPhase = RoomState.RoomPhase.GAME_RESULTS;
             duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("GAME_RESULTS", updated));
@@ -80,6 +80,8 @@ public class DuelWebSocketHandler extends TextWebSocketHandler {
             updated.roomPhase = RoomState.RoomPhase.ROUND_RESULTS;
             duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("ROUND_RESULTS", updated));
           }
+        } else {
+          duelGameService.broadcast(msg.roomId, mapper, new ServerMessage("GUESS_SUBMITTED", updated));
         }
       }
 

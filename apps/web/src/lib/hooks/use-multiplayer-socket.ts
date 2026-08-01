@@ -80,6 +80,9 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
         case "GAME_RESULTS":
           setGameState(message.payload);
           break;
+        case "GUESS_SUBMITTED":
+          setGameState(message.payload);
+          break;
         case "CREATED_ROOM":
           setCreatedRoomId(message.payload.roomId);
           break;
