@@ -12,8 +12,8 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
-  LinearProgress,
   Paper,
+  Skeleton,
   Stack,
   Typography,
 } from "@mui/material";
@@ -86,7 +86,27 @@ const ProfilePage = () => {
       }}
     >
       {loading ? (
-        <LinearProgress sx={{ width: "100%" }} />
+        <Paper sx={{ width: "100%", p: 4 }}>
+          <Stack alignItems="center" spacing={1} sx={{ mb: 3 }}>
+            <Skeleton variant="circular" width={72} height={72} />
+            <Skeleton variant="text" width={140} height={32} />
+          </Stack>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Stack spacing={1} sx={{ mb: 3 }}>
+            <Skeleton variant="text" width={140} height={20} />
+            <Skeleton variant="text" width={100} height={32} />
+            <Skeleton variant="text" width={180} height={20} />
+          </Stack>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Stack spacing={1}>
+            <Skeleton variant="rounded" height={36} />
+            <Skeleton variant="rounded" height={36} />
+          </Stack>
+        </Paper>
       ) : (
         <Paper sx={{ width: "100%", p: 4 }}>
           <Stack alignItems="center" spacing={1} sx={{ mb: 3 }}>
