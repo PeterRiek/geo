@@ -113,6 +113,10 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
     };
 
     initMap().catch(() => handleMapsError());
+    // otherGuesses is passed as a new array literal on every render by callers
+    // (e.g. postgame-view), so depending on it would recreate the map/markers
+    // on every render instead of only when the shown round changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center, zoom, guessLocation, targetLocation]);
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;

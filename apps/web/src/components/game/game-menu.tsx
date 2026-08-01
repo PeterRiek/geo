@@ -17,6 +17,8 @@ interface RoomSettings {
   roundCount: number;
 }
 
+const CREATE_ROOM_TIMEOUT_MS = 10_000;
+
 const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
 }) => {
@@ -34,27 +36,62 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   const [zoomEnabled, setZoomEnabled] = useState(true);
   const [roundCount, setRoundCount] = useState(5);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [connectionError, setConnectionError] = useState<string>();
   const scrollPositionRef = useRef<number>(0);
+  const createTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const { createRoom, createdRoomId, roomError } = useMultiplayerSocket(
-    undefined,
-    accessToken
-  );
+  const { createRoom, createdRoomId, roomError, connectionStatus } =
+    useMultiplayerSocket(undefined, accessToken);
+
+  const clearCreateTimeout = () => {
+    if (createTimeoutRef.current) {
+      clearTimeout(createTimeoutRef.current);
+      createTimeoutRef.current = undefined;
+    }
+  };
 
   const handleCreateRoom = (id: string, settings: RoomSettings) => {
+    setConnectionError(undefined);
     setIsCreatingRoom(true);
     createRoom(id, settings);
+
+    clearCreateTimeout();
+    createTimeoutRef.current = setTimeout(() => {
+      setIsCreatingRoom(false);
+      setConnectionError(
+        "Couldn't reach the game server. Check your connection and try again."
+      );
+    }, CREATE_ROOM_TIMEOUT_MS);
   };
 
   useEffect(() => {
     if (createdRoomId) {
+      clearCreateTimeout();
       router.push(`/game/play/mp?roomId=${createdRoomId}`);
     }
   }, [createdRoomId, router]);
 
   useEffect(() => {
-    if (roomError) setIsCreatingRoom(false);
+    if (roomError) {
+      clearCreateTimeout();
+      setIsCreatingRoom(false);
+    }
   }, [roomError]);
+
+  useEffect(() => {
+    if (
+      isCreatingRoom &&
+      (connectionStatus === "error" || connectionStatus === "closed")
+    ) {
+      clearCreateTimeout();
+      setIsCreatingRoom(false);
+      setConnectionError(
+        "Lost connection to the game server. Please try again."
+      );
+    }
+  }, [connectionStatus, isCreatingRoom]);
+
+  useEffect(() => clearCreateTimeout, []);
 
   useEffect(() => {
     if (mode === "multiplayer" && multiplayer === "create" && !roomId) {
@@ -124,7 +161,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
             setMultiplayer,
             createRoom: handleCreateRoom,
             isCreatingRoom,
-            roomError,
+            roomError: roomError ?? connectionError,
             roundCount,
             setRoundCount,
           }}

@@ -80,6 +80,10 @@ const Map: React.FC<MapProps> = ({
     };
 
     initMap().catch(() => handleMapsError());
+    // center/zoom are only read as the initial viewport; live changes flow back
+    // out via onCenterChange/onZoomChange, so re-running this on every change
+    // would recreate the map mid-drag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Dynamic map click listener

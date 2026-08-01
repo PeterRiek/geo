@@ -24,7 +24,7 @@ const MapList: React.FC<{
     if (containerRef.current) {
       containerRef.current.scrollTop = scrollPositionRef.current;
     }
-  }, []);
+  }, [scrollPositionRef]);
 
   return (
     <Box

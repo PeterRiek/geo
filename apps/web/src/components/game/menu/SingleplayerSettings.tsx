@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Container, Paper, Typography } from "@mui/material";
+import { Box, Button, Container, Paper } from "@mui/material";
 import MapSelect from "./MapSelect";
 import NMPZSelect from "./NMPZSelect";
 

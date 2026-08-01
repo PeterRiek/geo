@@ -78,6 +78,10 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       startRound();
     }
     setPrevGamePhase(gameState.roomPhase);
+    // This effect only reacts to roomPhase transitions; gameState updates on
+    // every socket tick and initRound/prevGamePhase are read from the closure
+    // at transition time, so including them would refire on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState?.roomPhase]);
 
   useEffect(() => {

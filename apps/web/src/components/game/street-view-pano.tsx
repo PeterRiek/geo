@@ -70,7 +70,7 @@ const StreetViewPano: React.FC<StreetViewPanoProps> = ({
       .catch(() => {
         handleMapsError();
       });
-  }, [location]);
+  }, [location, moveEnabled, zoomEnabled]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", pointerEvents: panEnabled ? "auto":"none" }}>
