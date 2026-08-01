@@ -61,7 +61,7 @@ const AppHeader: React.FC<Props> = ({ username }) => {
             color="inherit"
             noWrap
           >
-            NEW geo.riek.me
+        	geo.riek.me
           </Typography>
         </Stack>
 
