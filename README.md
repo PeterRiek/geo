@@ -18,7 +18,7 @@ A self-hosted geography guessing game: you're dropped into a Google Street View 
 | Frontend | Next.js 15 (App Router), React 19, MUI, NextAuth v5, Google Maps JS API |
 | Backend | Spring Boot 3 (Java 17), Spring Security + JWT, Spring WebSocket |
 | Database | PostgreSQL |
-| Deployment | Docker Compose, Portainer (GitOps stack, redeployed via a GitHub Actions webhook) |
+| Deployment | GitHub Actions builds & pushes images to GHCR, Docker Compose + Portainer pull and run them (GitOps stack, redeployed via a webhook) |
 
 ## Project structure
 
@@ -32,18 +32,22 @@ docker-compose.yml
 
 ## Getting started (Docker Compose)
 
-Requirements: Docker, and a Google Maps JavaScript API key with the Street View and Maps APIs enabled.
+`backend` and `web` are pulled as prebuilt images from GHCR (see [Deployment](#deployment)) rather than built by Compose — so `docker compose up` needs those images to already exist, i.e. `.github/workflows/deploy.yml` must have run at least once (push to `main`) with GHCR credentials configured.
 
 1. Copy the env template and fill in real values:
    ```bash
    cp .env.example .env
    ```
 2. Fill in `.env` — see [Environment variables](#environment-variables) below.
-3. Start everything:
+3. If the images are private, log in once so Compose can pull them:
    ```bash
-   docker compose up -d --build
+   docker login ghcr.io
    ```
-4. The web app is served on `WEB_PORT` (default `3000`), the API on `BACKEND_PORT` (default `8080`).
+4. Start everything:
+   ```bash
+   docker compose up -d
+   ```
+5. The web app is served on `WEB_PORT` (default `3000`), the API on `BACKEND_PORT` (default `8080`).
 
 ## Environment variables
 
@@ -52,22 +56,25 @@ All variables live in one `.env` at the repo root, consumed by `docker-compose.y
 | Variable | Used by | Notes |
 |---|---|---|
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | postgres, backend | Standard Postgres credentials. |
-| `BACKEND_PORT` / `WEB_PORT` | host | Host-side port mapping only. Container-internal ports stay `8080`/`3000` — changing these does **not** change the values below. |
+| `BACKEND_PORT` / `WEB_PORT` | host | Host-side port mapping only. Container-internal ports stay `8080`/`3000`. |
 | `JWT_SECRET` | backend | Signs auth tokens. Generate with `openssl rand -base64 48`. |
-| `NEXT_PUBLIC_API_URL` | web (server-side) | Next.js API routes call the backend over the **Docker network**, so this stays `http://backend:8080/api` regardless of deployment domain or `BACKEND_PORT`. |
-| `NEXT_PUBLIC_WS_URL` | web (browser) | The **browser** opens this WebSocket directly, so it must be reachable from wherever your users are, not the Docker network. For a public HTTPS deployment this is `wss://your-domain/ws` — see [Deployment](#deployment) below. |
-| `NEXT_PUBLIC_MAPS_KEY` | web (browser) | Google Maps JavaScript API key. |
+| `IMAGE_NAME` | web, backend | GHCR namespace, e.g. `peterriek/geoguessr-clone`. Images are pulled as `ghcr.io/<IMAGE_NAME>-backend` / `ghcr.io/<IMAGE_NAME>-web` — must match the `IMAGE_NAME` variable set on the `prd` GitHub environment. |
 | `NEXTAUTH_SECRET` | web | Encrypts NextAuth session tokens. Generate with `openssl rand -base64 48`. |
 | `NEXTAUTH_URL` | web | The public URL of the site, e.g. `https://your-domain`. |
 
-`NEXT_PUBLIC_*` variables are inlined into the frontend bundle **at build time** — changing them requires a rebuild of the `web` image, not just a container restart.
+`NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_WS_URL` / `NEXT_PUBLIC_MAPS_KEY` are **not** in this `.env` anymore — they're inlined into the `web` image at CI build time (see [Deployment](#deployment)), so they live as variables/secrets on the `prd` GitHub environment instead. Changing them means updating GitHub and pushing, not editing anything on the deploy host.
 
 ## Local development (without Docker)
 
-Run Postgres + the backend via Docker, then run the frontend directly for fast iteration:
+`backend` in `docker-compose.yml` now pulls a prebuilt image rather than building from source, so it won't reflect local backend changes — run it directly instead. Run Postgres via Docker, the backend via Gradle, and the frontend via `next dev`, all pointed at each other:
 
 ```bash
-docker compose up -d postgres backend
+docker compose up -d postgres
+cd apps/backend
+./gradlew bootRun
+```
+
+```bash
 cd apps/web
 npm install
 npm run dev
@@ -75,11 +82,10 @@ npm run dev
 
 `apps/web/.env.local` should point at the locally-running backend (`http://localhost:8080/api`, `ws://localhost:8080/ws`).
 
-Backend only, standalone:
+Backend tests:
 
 ```bash
 cd apps/backend
-./gradlew bootRun
 ./gradlew test
 ```
 
@@ -100,10 +106,21 @@ python scripts/ws.py "<token from above>"
 
 ## Deployment
 
-Production runs as a Portainer Git-based stack pointed at this repo's `docker-compose.yml`. `.github/workflows/deploy.yml` pings a Portainer webhook on every push to `main` to trigger a redeploy.
+On every push to `main`, `.github/workflows/deploy.yml`:
 
-Two things that trip people up when deploying behind a domain + HTTPS reverse proxy (nginx/Traefik/Caddy):
+1. Builds the `backend` and `web` images and pushes both to GHCR, tagged `latest` and with the commit SHA.
+2. Pings a Portainer webhook to redeploy.
+
+Portainer then just pulls the already-built images and restarts containers — it never runs a Docker build itself. This matters because Portainer's Git-stack deploys used to build both images inline as part of the deploy request; on a slow host that build could take longer than whatever reverse proxy sits in front of Portainer's own UI is willing to wait, producing a 504 and leaving containers half-created. Moving the build into CI removes that failure mode entirely — a redeploy is now just a pull + restart.
+
+**Required GitHub setup**, on the `prd` environment (Settings → Environments → prd):
+- Variables: `IMAGE_NAME` (e.g. `peterriek/geoguessr-clone`), `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`
+- Secrets: `NEXT_PUBLIC_MAPS_KEY`, `PORTAINER_WEBHOOK_URL`
+
+**Required on the deploy host**, since GHCR images are private by default: log Docker in to `ghcr.io` with a PAT that has `read:packages` scope (or add `ghcr.io` as a registry in Portainer under Registries), otherwise pulls will fail with an auth error.
+
+Two more things that trip people up when deploying behind a domain + HTTPS reverse proxy (nginx/Traefik/Caddy):
 
 - **`NEXT_PUBLIC_WS_URL` needs no port** — just `wss://your-domain/ws`. The browser only ever talks to your domain on 443; the actual container ports are an internal detail of how your proxy reaches them.
 - **The proxy must forward the WebSocket upgrade**, not just the HTTP request. For nginx, that means explicitly setting `Upgrade`/`Connection` headers on the `/ws` location block — a plain `proxy_pass` alone will silently fail the handshake.
-- If the repo is private, Portainer's Git integration needs its own credentials (a GitHub Personal Access Token, not your account password — GitHub disabled password auth for git operations).
+- If the repo is private, Portainer's Git integration (used to fetch `docker-compose.yml` itself) needs its own credentials — a GitHub Personal Access Token, not your account password, since GitHub disabled password auth for git operations.

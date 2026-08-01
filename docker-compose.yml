@@ -15,7 +15,8 @@ services:
       retries: 10
 
   backend:
-    build: ./apps/backend
+    image: ghcr.io/${IMAGE_NAME:-peterriek/geoguessr-clone}-backend:latest
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       postgres:
@@ -35,16 +36,12 @@ services:
       start_period: 60s
 
   web:
-    build:
-      context: ./apps/web
-      args:
-        # NEXT_PUBLIC_* vars are inlined at build time.
-        # API_URL is only ever read server-side (Next.js route handlers acting as a
-        # BFF), so it must use the docker-network hostname of the backend service.
-        # WS_URL is read from the browser, so it must be reachable from the host.
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:8080/api}
-        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8080/ws}
-        NEXT_PUBLIC_MAPS_KEY: ${NEXT_PUBLIC_MAPS_KEY}
+    # NEXT_PUBLIC_* vars are baked into this image at build time by the GitHub
+    # Actions workflow (see .github/workflows/deploy.yml), not here — changing
+    # them means updating the "prd" environment's variables/secrets in GitHub
+    # and pushing, not editing this file or the deploy-host .env.
+    image: ghcr.io/${IMAGE_NAME:-peterriek/geoguessr-clone}-web:latest
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       backend:

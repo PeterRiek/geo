@@ -86,15 +86,21 @@ const middleware = async (request: NextRequest) => {
 
   if (pathname.startsWith("/game/play")) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5_000);
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/user/can-play`,
         {
           headers: {
             Authorization: `Bearer ${session?.accessToken}`,
           },
+          signal: controller.signal,
         }
       );
-      
+
+      clearTimeout(timeout);
+
       if (res.status === 401) {
         const errorData = await res.json();
         if (errorData.error === "JWT token expired") {
