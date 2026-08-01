@@ -2,12 +2,12 @@ name: build-and-deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: prd
+    environment: ${{ github.ref_name == 'main' && 'prd' || 'dev' }}
     permissions:
       contents: read
       packages: write
