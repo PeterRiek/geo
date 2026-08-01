@@ -2,7 +2,14 @@
 
 import { Coords } from "@/types/geo";
 import { getDistanceInKm, getGuessrScore, formatDistance } from "@/lib/geo";
-import { Box, Button, Paper, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  MenuItem,
+  Paper,
+  Select,
+  Typography,
+} from "@mui/material";
 import { useMemo, useState } from "react";
 import SummaryMap from "@/components/game/summary-map";
 import AnimatedScore from "@/components/game/animated-score";
@@ -68,25 +75,18 @@ const PostgameView: React.FC<Props> = ({
         />
       </Paper>
 
-      <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center" useFlexGap sx={{ maxWidth: 480 }}>
+      <Select
+        value={round}
+        onChange={(e) => setRound(Number(e.target.value))}
+        size="small"
+        sx={{ minWidth: 160 }}
+      >
         {roundScores.map((s, i) => (
-          <Paper
-            key={i}
-            sx={{
-              px: 1.5,
-              py: 0.5,
-              bgcolor: i === round ? "primary.main" : undefined,
-              color: i === round ? "primary.contrastText" : undefined,
-              cursor: "pointer",
-            }}
-            onClick={() => setRound(i)}
-          >
-            <Typography variant="body2">
-              R{i + 1}: {s}
-            </Typography>
-          </Paper>
+          <MenuItem key={i} value={i}>
+            Round {i + 1}: {s}
+          </MenuItem>
         ))}
-      </Stack>
+      </Select>
 
       {currentDistance !== undefined && (
         <Typography variant="body2" color="text.secondary">

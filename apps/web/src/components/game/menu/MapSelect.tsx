@@ -1,7 +1,8 @@
 "use client";
 
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import MapList from "./MapList";
+import MapListSkeleton from "./MapListSkeleton";
 
 type Map = { id: number; name: string };
 
@@ -13,25 +14,17 @@ const MapSelect: React.FC<{
   scrollPositionRef: React.RefObject<number>;
 }> = ({ maps, selectedMap, setSelectedMap, mapsLoading, scrollPositionRef }) => (
   <>
-    {selectedMap && maps.find((m) => m.id === selectedMap) ? (
-      <Typography gutterBottom>
-        Selected Map:{" "}
-        <strong>{maps.find((m) => m.id === selectedMap)?.name}</strong>
-      </Typography>
-    ) : (
-      <Typography gutterBottom>No map selected</Typography>
-    )}
     <Box
       sx={{
-        height: "80%",
+        height: "100%",
         width: "100%",
         display: "flex",
         justifyContent: "center",
-        alignItems: "center",
+        alignItems: "flex-start",
       }}
     >
       {mapsLoading ? (
-        <CircularProgress />
+        <MapListSkeleton />
       ) : (
         <MapList
           maps={maps}

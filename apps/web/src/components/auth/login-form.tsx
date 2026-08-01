@@ -25,6 +25,7 @@ const LoginForm = () => {
 
     if (res && !res.error) {
       router.push("/");
+      router.refresh();
     } else {
       setLoading(false);
       setError("Invalid username or password");

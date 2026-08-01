@@ -3,16 +3,23 @@
 import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
 import { Coords } from "@/types/geo";
 import {
+  Alert,
   Box,
   Button,
   Chip,
   Fade,
+  IconButton,
+  InputAdornment,
   Paper,
+  Snackbar,
   Stack,
+  TextField,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import InGameView from "../singleplayer/views/ingame-view";
 import RoundResultView from "../singleplayer/views/round-result-view";
@@ -21,6 +28,9 @@ import { useSearchParams } from "next/navigation";
 import PostgameView from "../singleplayer/views/postgame-view";
 import GameFallback from "@/components/game/game-fallback";
 import ConnectionBanner from "@/components/game/connection-banner";
+import GameSettingsSummary from "@/components/game/game-settings-summary";
+
+const MIN_PLAYERS_TO_START = 2;
 
 export type GamePhase = "PREGAME" | "INGAME" | "ROUND_RESULT" | "POSTGAME";
 
@@ -42,6 +52,9 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const [guessLocation, setGuessLocation] = useState<Coords>();
   const [roundFinished, setRoundFinished] = useState(false);
   const [prevGamePhase, setPrevGamePhase] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     phaseContainerRef.current?.focus();
@@ -113,6 +126,39 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
     startGame();
   };
 
+  const copyWithFallback = (text: string): boolean => {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const succeeded = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return succeeded;
+  };
+
+  const handleCopyRoomCode = async () => {
+    if (!roomId) return;
+
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(roomId);
+        setCodeCopied(true);
+        return;
+      } catch {
+        // fall through to the legacy fallback below
+      }
+    }
+
+    if (copyWithFallback(roomId)) {
+      setCodeCopied(true);
+    } else {
+      setCopyError(true);
+    }
+  };
+
   const next = () => {
     nextRound();
   };
@@ -146,7 +192,12 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
           <Button onClick={() => join()} variant="contained" size="large">
             TRY TO REJOIN
           </Button>
-          <Button href="/game" variant="contained" size="large">
+          <Button
+            href="/game"
+            variant="contained"
+            size="large"
+            onClick={() => setLeaving(true)}
+          >
             BACK TO MENU
           </Button>
         </Stack>
@@ -169,6 +220,9 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       );
     } else if (gameState.roomPhase == "WAITING") {
       phaseKey = "waiting";
+      const playerCount = gameState.players?.length ?? 0;
+      const notEnoughPlayers = playerCount < MIN_PLAYERS_TO_START;
+
       content = (
         <Box
           sx={{
@@ -181,12 +235,40 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
             p: 4,
           }}
         >
-          <Typography variant="h1" textAlign="center">
-            Waiting to start...
-          </Typography>
+          <GameSettingsSummary
+            mapId={gameSettings.mapId}
+            allowMove={gameSettings.allowMove}
+            allowPan={gameSettings.allowPan}
+            allowZoom={gameSettings.allowZoom}
+            roundCount={gameSettings.roundCount}
+          />
+          <TextField
+            label="Room Code"
+            value={roomId ?? ""}
+            slotProps={{
+              input: {
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Tooltip title="Copy room code">
+                      <span>
+                        <IconButton
+                          onClick={handleCopyRoomCode}
+                          disabled={!roomId}
+                          edge="end"
+                        >
+                          <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
           <Paper sx={{ p: 2, minWidth: 240 }}>
             <Typography variant="subtitle1" gutterBottom>
-              Players ({gameState.players?.length ?? 0})
+              Players ({playerCount})
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {gameState.players?.map((player) => (
@@ -198,9 +280,29 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
               ))}
             </Stack>
           </Paper>
-          <Button onClick={() => start()} variant="contained" size="large">
-            Start Game
-          </Button>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Button
+              href="/game"
+              variant="outlined"
+              size="large"
+              onClick={() => setLeaving(true)}
+            >
+              Back
+            </Button>
+            <Button
+              onClick={() => start()}
+              variant="contained"
+              size="large"
+              disabled={notEnoughPlayers}
+            >
+              Start Game
+            </Button>
+          </Stack>
+          {notEnoughPlayers && (
+            <Typography variant="body2" color="text.secondary">
+              Need at least {MIN_PLAYERS_TO_START} players to start
+            </Typography>
+          )}
         </Box>
       );
     } else if (
@@ -286,7 +388,9 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
 
   return (
     <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
-      <ConnectionBanner status={connectionStatus} onReconnect={reconnect} />
+      {phaseKey !== "postgame" && !leaving && (
+        <ConnectionBanner status={connectionStatus} onReconnect={reconnect} />
+      )}
       <Fade in key={phaseKey} timeout={300}>
         <div
           ref={phaseContainerRef}
@@ -296,6 +400,21 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
           {content}
         </div>
       </Fade>
+      <Snackbar
+        open={codeCopied}
+        autoHideDuration={2000}
+        onClose={() => setCodeCopied(false)}
+        message="Room code copied!"
+      />
+      <Snackbar
+        open={copyError}
+        autoHideDuration={3000}
+        onClose={() => setCopyError(false)}
+      >
+        <Alert severity="error" onClose={() => setCopyError(false)}>
+          Couldn&apos;t copy the code. Please copy the Room Code manually.
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

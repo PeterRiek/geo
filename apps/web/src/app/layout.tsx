@@ -17,7 +17,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "GeoGuessr Clone",
+  title: "geo.riek.me",
   description: "GeoGuessr But Free",
 };
 

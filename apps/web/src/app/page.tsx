@@ -66,7 +66,15 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
           }}
         >
           <Typography variant="h4" textAlign="center" fontWeight={500}>
-            Welcome back, {session.user.name}
+            Welcome back,{" "}
+            <Typography
+              component="span"
+              variant="h4"
+              fontWeight={700}
+              color="primary"
+            >
+              {session.user.name}
+            </Typography>
           </Typography>
           {canPlay && (
             <Typography variant="body2" color="text.secondary">

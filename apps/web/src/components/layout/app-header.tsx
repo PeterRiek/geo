@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   AppBar,
@@ -10,16 +10,22 @@ import {
   Button,
   Box,
   IconButton,
-  Menu,
-  MenuItem,
+  Drawer,
+  List,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
+  Divider,
 } from "@mui/material";
+import { useColorScheme } from "@mui/material/styles";
 import MenuIcon from "@mui/icons-material/Menu";
 import PublicIcon from "@mui/icons-material/Public";
 import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
+import LoginIcon from "@mui/icons-material/Login";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import { logout } from "@/lib/actions/auth";
 import SignOutButton from "@/components/auth/sing-out-button";
 import ColorModeToggle from "./color-mode-toggle";
@@ -29,8 +35,13 @@ interface Props {
 }
 
 const AppHeader: React.FC<Props> = ({ username }) => {
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const closeMenu = () => setAnchorEl(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const closeSidebar = () => setSidebarOpen(false);
+
+  const { mode, systemMode, setMode } = useColorScheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && (mode === "system" ? systemMode : mode) === "dark";
 
   return (
     <AppBar position="static" color="default" elevation={1}>
@@ -49,66 +60,128 @@ const AppHeader: React.FC<Props> = ({ username }) => {
             fontWeight={600}
             color="inherit"
             noWrap
-            sx={{ display: { xs: "none", sm: "block" } }}
           >
-            GeoGuessr Clone
+            geo.riek.me
           </Typography>
         </Stack>
 
         {username && (
-          <>
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              sx={{ display: { xs: "none", sm: "flex" } }}
-            >
-              <Button component={Link} href="/game" startIcon={<SportsEsportsIcon />}>
-                Play
-              </Button>
-              <Button component={Link} href="/profile" startIcon={<AccountCircleIcon />}>
-                {username}
-              </Button>
-              <SignOutButton />
-            </Stack>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ display: { xs: "none", sm: "flex" } }}
+          >
+            <Button component={Link} href="/game" startIcon={<SportsEsportsIcon />}>
+              Play
+            </Button>
+            <Button component={Link} href="/profile" startIcon={<AccountCircleIcon />}>
+              {username}
+            </Button>
+            <SignOutButton />
+          </Stack>
+        )}
 
-            <Box sx={{ display: { xs: "block", sm: "none" } }}>
-              <IconButton
-                color="inherit"
-                aria-label="Open menu"
-                onClick={(e) => setAnchorEl(e.currentTarget)}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-                <MenuItem component={Link} href="/game" onClick={closeMenu}>
-                  <ListItemIcon>
-                    <SportsEsportsIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>Play</ListItemText>
-                </MenuItem>
-                <MenuItem component={Link} href="/profile" onClick={closeMenu}>
-                  <ListItemIcon>
-                    <AccountCircleIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>{username}</ListItemText>
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    closeMenu();
-                    logout();
-                  }}
+        <Box sx={{ display: { xs: "block", sm: "none" } }}>
+          <IconButton
+            color="inherit"
+            aria-label="Open menu"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Drawer anchor="right" open={sidebarOpen} onClose={closeSidebar}>
+            <Box
+              role="presentation"
+              sx={{
+                width: 260,
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <List>
+                <ListItemButton
+                  onClick={() => setMode(isDark ? "light" : "dark")}
                 >
                   <ListItemIcon>
-                    <LogoutIcon fontSize="small" />
+                    {isDark ? (
+                      <LightModeIcon fontSize="small" />
+                    ) : (
+                      <DarkModeIcon fontSize="small" />
+                    )}
                   </ListItemIcon>
-                  <ListItemText>Sign Out</ListItemText>
-                </MenuItem>
-              </Menu>
+                  <ListItemText>
+                    {isDark ? "Light mode" : "Dark mode"}
+                  </ListItemText>
+                </ListItemButton>
+                <Divider sx={{ my: 1 }} />
+                {username ? (
+                  <>
+                    <ListItemButton
+                      component={Link}
+                      href="/game"
+                      onClick={closeSidebar}
+                    >
+                      <ListItemIcon>
+                        <SportsEsportsIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText>Play</ListItemText>
+                    </ListItemButton>
+                    <ListItemButton
+                      component={Link}
+                      href="/profile"
+                      onClick={closeSidebar}
+                    >
+                      <ListItemIcon>
+                        <AccountCircleIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText>{username}</ListItemText>
+                    </ListItemButton>
+                    <ListItemButton
+                      onClick={() => {
+                        closeSidebar();
+                        logout();
+                      }}
+                    >
+                      <ListItemIcon>
+                        <LogoutIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText>Sign Out</ListItemText>
+                    </ListItemButton>
+                  </>
+                ) : (
+                  <ListItemButton
+                    component={Link}
+                    href="/login"
+                    onClick={closeSidebar}
+                  >
+                    <ListItemIcon>
+                      <LoginIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Login</ListItemText>
+                  </ListItemButton>
+                )}
+              </List>
+
+              <Box sx={{ flexGrow: 1 }} />
+
+              <Divider />
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                textAlign="center"
+                sx={{ py: 2 }}
+              >
+                &copy; {new Date().getFullYear()} geo.riek.me
+              </Typography>
             </Box>
-          </>
-        )}
-        <ColorModeToggle />
+          </Drawer>
+        </Box>
+
+        <Box sx={{ display: { xs: "none", sm: "inline-flex" } }}>
+          <ColorModeToggle />
+        </Box>
       </Toolbar>
     </AppBar>
   );

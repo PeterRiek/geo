@@ -1,4 +1,4 @@
-# GeoGuessr Clone
+# geo.riek.me
 
 A self-hosted geography guessing game: you're dropped into a Google Street View panorama and have to guess where in the world it is by placing a pin on a map. Play solo against the clock, or duel a friend in real time.
 

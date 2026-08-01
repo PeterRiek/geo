@@ -61,6 +61,7 @@ export default function RegisterPage() {
 
     if (signInRes && !signInRes.error) {
       router.push("/");
+      router.refresh();
     } else {
       setLoading(false);
       router.push("/login");

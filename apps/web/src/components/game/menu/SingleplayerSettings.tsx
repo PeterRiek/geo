@@ -23,18 +23,27 @@ const SingleplayerSettings: React.FC<any> = ({
 }) => (
   <Box
     sx={{
-      height: "80%",
+      flex: 1,
+      minHeight: 0,
       width: "100%",
       display: "flex",
       flexDirection: "column",
-      justifyContent: "center",
       alignItems: "center",
     }}
   >
     <Container
-      sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        gap: 1,
+        pt: 1,
+        pb: 3,
+      }}
     >
-      <Paper sx={{ p: 1, maxHeight: "50%" }}>
+      <Paper sx={{ p: 1, flex: 1, minHeight: 0, display: "flex" }}>
         <MapSelect
           maps={maps}
           selectedMap={selectedMap}
@@ -58,10 +67,17 @@ const SingleplayerSettings: React.FC<any> = ({
       <Button
         href={`/game/play/sp/?mapId=${selectedMap}&allowMove=${moveEnabled}&allowPan=${panEnabled}&allowZoom=${zoomEnabled}&rounds=${roundCount}`}
         variant="contained"
+        size="large"
         fullWidth
         disabled={!selectedMap}
       >
-        Play
+        {selectedMap
+          ? `Play ${
+              (maps as { id: number; name: string }[]).find(
+                (m) => m.id === selectedMap
+              )?.name ?? ""
+            }`
+          : "Select a map"}
       </Button>
     </Container>
   </Box>

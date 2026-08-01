@@ -81,11 +81,11 @@ const MultiplayerSettings: React.FC<any> = ({
   return (
   <Box
     sx={{
-      height: "80%",
+      flex: 1,
+      minHeight: 0,
       width: "100%",
       display: "flex",
       flexDirection: "column",
-      justifyContent: "center",
       alignItems: "center",
     }}
   >
@@ -102,7 +102,17 @@ const MultiplayerSettings: React.FC<any> = ({
     </ToggleButtonGroup>
 
     <Container
-      sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        gap: 1,
+        pt: 1,
+        pb: 3,
+      }}
     >
       {multiplayer === "join" ? (
         <>
@@ -117,6 +127,7 @@ const MultiplayerSettings: React.FC<any> = ({
           <Button
             href={`/game/play/mp?roomId=${roomId}`}
             variant="contained"
+            size="large"
             fullWidth
             disabled={!roomId}
           >
@@ -125,7 +136,7 @@ const MultiplayerSettings: React.FC<any> = ({
         </>
       ) : (
         <>
-          <Paper sx={{ p: 1, maxHeight: "50%" }}>
+          <Paper sx={{ p: 1, flex: 1, minHeight: 0, display: "flex" }}>
             <MapSelect
               maps={maps}
               selectedMap={selectedMap}
@@ -186,11 +197,18 @@ const MultiplayerSettings: React.FC<any> = ({
               });
             }}
             variant="contained"
+            size="large"
             fullWidth
             loading={isCreatingRoom}
             disabled={!selectedMap || !roomId || isCreatingRoom}
           >
-            Create Game
+            {selectedMap
+              ? `Create Game — ${
+                  (maps as { id: number; name: string }[]).find(
+                    (m) => m.id === selectedMap
+                  )?.name ?? ""
+                }`
+              : "Select a map"}
           </Button>
         </>
       )}

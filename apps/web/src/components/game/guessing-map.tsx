@@ -67,7 +67,7 @@ const Map: React.FC<MapProps> = ({
       const mapOptions: google.maps.MapOptions = {
         center: center ?? { lat: 0, lng: 0 },
         zoom: zoom ?? 1,
-        mapId: "GeoGuessr-Clone MAP",
+        mapId: "geo.riek.me MAP",
         disableDefaultUI: true,
         gestureHandling: "greedy",
         clickableIcons: false,

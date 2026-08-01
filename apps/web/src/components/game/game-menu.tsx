@@ -119,10 +119,11 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
+        pt: 4,
       }}
     >
       <ModeSelect mode={mode} setMode={setMode} />
-      <Divider sx={{ my: 4 }} />
+      <Divider sx={{ my: 1 }} />
       {mode === "singleplayer" ? (
         <SingleplayerSettings
           {...{

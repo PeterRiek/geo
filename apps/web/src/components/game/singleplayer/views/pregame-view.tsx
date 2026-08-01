@@ -1,5 +1,5 @@
-import { Box, Button, Chip, Paper, Stack, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import { Box, Button, Stack } from "@mui/material";
+import GameSettingsSummary from "@/components/game/game-settings-summary";
 
 interface Props {
   playSet: {
@@ -13,22 +13,6 @@ interface Props {
 }
 
 const PregameView: React.FC<Props> = ({ playSet, onStart }) => {
-  const [mapName, setMapName] = useState<string>();
-
-  useEffect(() => {
-    const loadMapName = async () => {
-      try {
-        const res = await fetch(`/api/gamemap/${playSet.mapId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        setMapName(data.name);
-      } catch {
-        // fall back to raw id below
-      }
-    };
-    loadMapName();
-  }, [playSet.mapId]);
-
   return (
     <Box
       sx={{
@@ -41,45 +25,21 @@ const PregameView: React.FC<Props> = ({ playSet, onStart }) => {
         p: 4,
       }}
     >
-      <Paper
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 4,
-          p: 2,
-        }}
-      >
-        <Stack justifyContent="center">
-          <Typography variant="h2" textAlign="center">
-            Playing Map
-          </Typography>
-          <Typography variant="h3" textAlign="center" fontWeight={500}>
-            {mapName ?? playSet.mapId}
-          </Typography>
-          <Typography color="text.secondary">
-            {playSet.roundCount} {playSet.roundCount === 1 ? "Round" : "Rounds"}
-          </Typography>
-        </Stack>
-        <Stack direction="row" spacing={1}>
-          <Chip
-            label={playSet.allowMove ? "MOVE" : "NO MOVE"}
-            color={playSet.allowMove ? "success" : "default"}
-          />
-          <Chip
-            label={playSet.allowPan ? "PAN" : "NO PAN"}
-            color={playSet.allowPan ? "success" : "default"}
-          />
-          <Chip
-            label={playSet.allowZoom ? "ZOOM" : "NO ZOOM"}
-            color={playSet.allowZoom ? "success" : "default"}
-          />
-        </Stack>
-      </Paper>
-      <Button onClick={onStart} variant="contained" size="large">
-        Start Game
-      </Button>
+      <GameSettingsSummary
+        mapId={playSet.mapId}
+        allowMove={playSet.allowMove}
+        allowPan={playSet.allowPan}
+        allowZoom={playSet.allowZoom}
+        roundCount={playSet.roundCount}
+      />
+      <Stack direction="row" spacing={2}>
+        <Button href="/game" variant="outlined" size="large">
+          Back
+        </Button>
+        <Button onClick={onStart} variant="contained" size="large">
+          Start Game
+        </Button>
+      </Stack>
     </Box>
   );
 };
