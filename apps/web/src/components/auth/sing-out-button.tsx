@@ -7,7 +7,7 @@ import React from "react";
 
 const SignOutButton = () => {
   return (
-    <Button onClick={logout} endIcon={<LogoutIcon />}>
+    <Button onClick={logout} startIcon={<LogoutIcon />}>
       Sign Out
     </Button>
   );

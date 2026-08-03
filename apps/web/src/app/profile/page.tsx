@@ -1,6 +1,6 @@
 "use client";
 
-import { logout } from "@/lib/actions/auth";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Alert,
   Avatar,
@@ -15,11 +15,16 @@ import {
   Paper,
   Skeleton,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import { useRouter } from "next/navigation";
+import EditIcon from "@mui/icons-material/Edit";
+import { logout } from "@/lib/actions/auth";
+import SignOutButton from "@/components/auth/sing-out-button";
+import HistoryList from "@/components/game/history/history-list";
 import React, { useEffect, useState } from "react";
 
 interface UserData {
@@ -35,9 +40,13 @@ interface CanPlayData {
 
 const ProfilePage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab") === "history" ? "history" : "overview";
+
   const [data, setData] = useState<UserData>();
   const [canPlay, setCanPlay] = useState<CanPlayData>();
   const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -78,14 +87,26 @@ const ProfilePage = () => {
       maxWidth="sm"
       sx={{
         display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
         flexDirection: "column",
         height: "100%",
         p: 4,
       }}
     >
-      {loading ? (
+      <Tabs
+        value={tab}
+        onChange={(_, value) => router.push(`/profile?tab=${value}`)}
+        centered
+        sx={{ mb: 2 }}
+      >
+        <Tab label="Overview" value="overview" />
+        <Tab label="History" value="history" />
+      </Tabs>
+
+      {tab === "history" ? (
+        <Paper sx={{ flex: 1, minHeight: 0, p: 1, display: "flex" }}>
+          <HistoryList />
+        </Paper>
+      ) : loading ? (
         <Paper sx={{ width: "100%", p: 4 }}>
           <Stack alignItems="center" spacing={1} sx={{ mb: 3 }}>
             <Skeleton variant="circular" width={72} height={72} />
@@ -138,19 +159,34 @@ const ProfilePage = () => {
           <Divider sx={{ my: 2 }} />
 
           <Stack spacing={1}>
-            <Button onClick={() => router.push("/game")} variant="contained">
-              Play a game
+            <Button onClick={() => setEditOpen(true)} startIcon={<EditIcon />}>
+              Edit Profile
             </Button>
-            <Button
-              onClick={() => setDeleteDialogOpen(true)}
-              color="error"
-              startIcon={<DeleteForeverIcon />}
-            >
-              Delete Account
-            </Button>
+            <SignOutButton />
           </Stack>
         </Paper>
       )}
+
+      <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Edit Profile</DialogTitle>
+        <DialogContent>
+          <Typography variant="subtitle2" color="error" sx={{ mb: 1 }}>
+            Danger zone
+          </Typography>
+          <Button
+            onClick={() => setDeleteDialogOpen(true)}
+            color="error"
+            variant="outlined"
+            startIcon={<DeleteForeverIcon />}
+            fullWidth
+          >
+            Delete Account
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete your account?</DialogTitle>

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Alert, Box, Button, Container, Paper } from "@mui/material";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import SelectedMapSummary from "./SelectedMapSummary";
 import NMPZSelect from "./NMPZSelect";
 
@@ -35,6 +36,7 @@ const SingleplayerSettings: React.FC<any> = ({
     }}
   >
     <Container
+      maxWidth="md"
       sx={{
         flex: 1,
         minHeight: 0,
@@ -46,7 +48,7 @@ const SingleplayerSettings: React.FC<any> = ({
         pb: 3,
       }}
     >
-      <Paper sx={{ p: 1 }}>
+      <Paper sx={{ overflow: "hidden" }}>
         <SelectedMapSummary maps={maps} selectedMap={selectedMap} mapsLoading={mapsLoading} />
       </Paper>
       <Paper sx={{ p: 1 }}>
@@ -71,14 +73,9 @@ const SingleplayerSettings: React.FC<any> = ({
         fullWidth
         loading={isStarting}
         disabled={!selectedMap || isStarting}
+        startIcon={selectedMap ? <PlayArrowIcon /> : undefined}
       >
-        {selectedMap
-          ? `Play ${
-              (maps as { id: number; name: string }[]).find(
-                (m) => m.id === selectedMap
-              )?.name ?? ""
-            }`
-          : "Select a map"}
+        {selectedMap ? "Play" : "Select a map"}
       </Button>
     </Container>
   </Box>

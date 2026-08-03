@@ -27,7 +27,15 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [maps, setMaps] = useState<{ id: number; name: string; imageUrl?: string }[]>([]);
+  const [maps, setMaps] = useState<
+    {
+      id: number;
+      name: string;
+      imageUrl?: string;
+      maxErrorDistanceKm?: number;
+      ownerUsername?: string;
+    }[]
+  >([]);
   const [mapsLoading, setMapsLoading] = useState(true);
   const [selectedMap, setSelectedMap] = useState<number>();
   const [roomId, setRoomId] = useState("");
@@ -138,8 +146,16 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
       setMapsLoading(true);
       const resp = await fetch("/api/gamemap");
       const data = await resp.json();
-      // eslint-disable-next-line
-      setMaps(data.map((m: any) => ({ id: m.id, name: m.name, imageUrl: m.imageUrl })));
+      setMaps(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data.map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          imageUrl: m.imageUrl,
+          maxErrorDistanceKm: m.maxErrorDistanceKm,
+          ownerUsername: m.ownerUsername,
+        }))
+      );
       setMapsLoading(false);
     };
     loadMaps();

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   AppBar,
   Toolbar,
@@ -21,15 +22,11 @@ import { useColorScheme } from "@mui/material/styles";
 import MenuIcon from "@mui/icons-material/Menu";
 import PublicIcon from "@mui/icons-material/Public";
 import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
-import HistoryIcon from "@mui/icons-material/History";
 import MapIcon from "@mui/icons-material/Map";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import LogoutIcon from "@mui/icons-material/Logout";
 import LoginIcon from "@mui/icons-material/Login";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
-import { logout } from "@/lib/actions/auth";
-import SignOutButton from "@/components/auth/sing-out-button";
 import ColorModeToggle from "./color-mode-toggle";
 
 interface Props {
@@ -37,8 +34,14 @@ interface Props {
 }
 
 const AppHeader: React.FC<Props> = ({ username }) => {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = () => setSidebarOpen(false);
+
+  const isActive = (href: string) =>
+    href === "/game"
+      ? pathname === "/game" || pathname?.startsWith("/game/play")
+      : pathname?.startsWith(href);
 
   const { mode, systemMode, setMode } = useColorScheme();
   const [mounted, setMounted] = useState(false);
@@ -74,19 +77,30 @@ const AppHeader: React.FC<Props> = ({ username }) => {
             alignItems="center"
             sx={{ display: { xs: "none", sm: "flex" } }}
           >
-            <Button component={Link} href="/game" startIcon={<SportsEsportsIcon />}>
+            <Button
+              component={Link}
+              href="/game"
+              startIcon={<SportsEsportsIcon />}
+              color={isActive("/game") ? "primary" : "inherit"}
+            >
               Play
             </Button>
-            <Button component={Link} href="/history" startIcon={<HistoryIcon />}>
-              History
-            </Button>
-            <Button component={Link} href="/game/maps" startIcon={<MapIcon />}>
+            <Button
+              component={Link}
+              href="/game/maps"
+              startIcon={<MapIcon />}
+              color={isActive("/game/maps") ? "primary" : "inherit"}
+            >
               Maps
             </Button>
-            <Button component={Link} href="/profile" startIcon={<AccountCircleIcon />}>
+            <Button
+              component={Link}
+              href="/profile"
+              startIcon={<AccountCircleIcon />}
+              color={isActive("/profile") ? "primary" : "inherit"}
+            >
               Profile
             </Button>
-            <SignOutButton />
           </Stack>
         )}
 
@@ -130,6 +144,7 @@ const AppHeader: React.FC<Props> = ({ username }) => {
                       component={Link}
                       href="/game"
                       onClick={closeSidebar}
+                      selected={isActive("/game")}
                     >
                       <ListItemIcon>
                         <SportsEsportsIcon fontSize="small" />
@@ -138,18 +153,9 @@ const AppHeader: React.FC<Props> = ({ username }) => {
                     </ListItemButton>
                     <ListItemButton
                       component={Link}
-                      href="/history"
-                      onClick={closeSidebar}
-                    >
-                      <ListItemIcon>
-                        <HistoryIcon fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText>History</ListItemText>
-                    </ListItemButton>
-                    <ListItemButton
-                      component={Link}
                       href="/game/maps"
                       onClick={closeSidebar}
+                      selected={isActive("/game/maps")}
                     >
                       <ListItemIcon>
                         <MapIcon fontSize="small" />
@@ -160,22 +166,12 @@ const AppHeader: React.FC<Props> = ({ username }) => {
                       component={Link}
                       href="/profile"
                       onClick={closeSidebar}
+                      selected={isActive("/profile")}
                     >
                       <ListItemIcon>
                         <AccountCircleIcon fontSize="small" />
                       </ListItemIcon>
                       <ListItemText>Profile</ListItemText>
-                    </ListItemButton>
-                    <ListItemButton
-                      onClick={() => {
-                        closeSidebar();
-                        logout();
-                      }}
-                    >
-                      <ListItemIcon>
-                        <LogoutIcon fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText>Sign Out</ListItemText>
                     </ListItemButton>
                   </>
                 ) : (

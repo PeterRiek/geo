@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Box,
   Button,
   Popover,
   Slider,
@@ -9,6 +10,8 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
+import TimerIcon from "@mui/icons-material/Timer";
 import React, { useState } from "react";
 
 const NMPZSelect: React.FC<{
@@ -50,6 +53,10 @@ const NMPZSelect: React.FC<{
       <ToggleButtonGroup
         value={[moveEnabled, panEnabled, zoomEnabled]}
         color="primary"
+        sx={{
+          "& .MuiToggleButton-root": { height: 36.5 },
+          "& .MuiToggleButton-root:not(.Mui-selected)": { color: "text.secondary" },
+        }}
       >
         <ToggleButton
           value="move"
@@ -74,8 +81,20 @@ const NMPZSelect: React.FC<{
         </ToggleButton>
       </ToggleButtonGroup>
 
-      <Button variant="outlined" onClick={(e) => setRoundsAnchor(e.currentTarget)}>
-        Rounds: {roundCount}
+      <Button
+        variant="outlined"
+        startIcon={<FormatListNumberedIcon />}
+        onClick={(e) => setRoundsAnchor(e.currentTarget)}
+        sx={{
+          minWidth: 0,
+          height: 36.5,
+          px: { xs: 1.5, sm: 2 },
+          "& .MuiButton-startIcon": { mx: { xs: 0, sm: undefined } },
+        }}
+      >
+        <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+          Rounds: {roundCount}
+        </Box>
       </Button>
       <Popover
         open={!!roundsAnchor}
@@ -98,8 +117,20 @@ const NMPZSelect: React.FC<{
         </Stack>
       </Popover>
 
-      <Button variant="outlined" onClick={(e) => setTimeLimitAnchor(e.currentTarget)}>
-        Time: {timeLimitLabel}
+      <Button
+        variant="outlined"
+        startIcon={<TimerIcon />}
+        onClick={(e) => setTimeLimitAnchor(e.currentTarget)}
+        sx={{
+          minWidth: 0,
+          height: 36.5,
+          px: { xs: 1.5, sm: 2 },
+          "& .MuiButton-startIcon": { mx: { xs: 0, sm: undefined } },
+        }}
+      >
+        <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+          Time: {timeLimitLabel}
+        </Box>
       </Button>
       <Popover
         open={!!timeLimitAnchor}

@@ -83,7 +83,7 @@ const HistoryDetail: React.FC<{ id: string; username: string }> = ({ id, usernam
         allTargets={allTargets}
         allScores={allScores}
         allDistances={allDistances}
-        backHref="/history"
+        backHref="/profile?tab=history"
         backLabel="BACK TO HISTORY"
       />
     </Box>

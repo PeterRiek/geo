@@ -6,15 +6,23 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
+  Checkbox,
   Container,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControlLabel,
+  FormGroup,
   IconButton,
+  InputAdornment,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
   Paper,
+  Popover,
   Stack,
   Switch,
   TextField,
@@ -24,6 +32,11 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import PersonIcon from "@mui/icons-material/Person";
+import SearchIcon from "@mui/icons-material/Search";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { getPublicBackendOrigin } from "@/lib/backend-url";
 import MapListSkeleton from "./MapListSkeleton";
 
@@ -46,9 +59,22 @@ interface EditState {
   error?: string;
 }
 
+type MapCategory = "official" | "yours" | "community";
+
+const mapCategory = (map: GameMap): MapCategory =>
+  map.isOwn ? "yours" : map.ownerUsername ? "community" : "official";
+
 const MapsLibrary: React.FC = () => {
   const router = useRouter();
   const [maps, setMaps] = useState<GameMap[]>();
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Record<MapCategory, boolean>>({
+    official: true,
+    yours: true,
+    community: true,
+  });
+  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [loadError, setLoadError] = useState<string>();
   const [edit, setEdit] = useState<EditState>();
   const [deleteTarget, setDeleteTarget] = useState<GameMap>();
@@ -74,6 +100,15 @@ const MapsLibrary: React.FC = () => {
   const handlePlay = (id: number) => {
     router.push(`/game?mapId=${id}`);
   };
+
+  const filteredMaps = maps?.filter(
+    (map) =>
+      map.name.toLowerCase().includes(search.trim().toLowerCase()) &&
+      filters[mapCategory(map)]
+  );
+
+  const toggleFilter = (category: MapCategory) =>
+    setFilters((prev) => ({ ...prev, [category]: !prev[category] }));
 
   const openEdit = (map: GameMap) => {
     setEdit({
@@ -127,6 +162,7 @@ const MapsLibrary: React.FC = () => {
       }
       setMaps((prev) => prev?.filter((m) => m.id !== deleteTarget.id));
       setDeleteTarget(undefined);
+      setEdit(undefined);
     } catch {
       setDeleteError("Failed to delete map. Check your connection and try again.");
     } finally {
@@ -138,12 +174,97 @@ const MapsLibrary: React.FC = () => {
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h5">Maps</Typography>
-        <Button href="/game/maps/upload" variant="contained" startIcon={<UploadFileIcon />}>
-          Upload a map
-        </Button>
+        <IconButton
+          aria-label="Maps menu"
+          onClick={(e) => setMenuAnchor(e.currentTarget)}
+        >
+          <MoreVertIcon />
+        </IconButton>
+        <Menu
+          open={!!menuAnchor}
+          anchorEl={menuAnchor}
+          onClose={() => setMenuAnchor(null)}
+        >
+          <MenuItem
+            component="a"
+            href="/game/maps/upload"
+            onClick={() => setMenuAnchor(null)}
+          >
+            <ListItemIcon>
+              <UploadFileIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Upload a map</ListItemText>
+          </MenuItem>
+        </Menu>
       </Stack>
 
       {loadError && <Alert severity="error">{loadError}</Alert>}
+
+      {maps && maps.length > 0 && (
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+          <TextField
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search maps"
+            fullWidth
+            size="small"
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          <Button
+            variant="outlined"
+            startIcon={<FilterListIcon />}
+            onClick={(e) => setFilterAnchor(e.currentTarget)}
+            sx={{ flexShrink: 0 }}
+          >
+            Filter
+          </Button>
+          <Popover
+            open={!!filterAnchor}
+            anchorEl={filterAnchor}
+            onClose={() => setFilterAnchor(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+          >
+            <FormGroup sx={{ p: 2 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={filters.official}
+                    onChange={() => toggleFilter("official")}
+                  />
+                }
+                label="Official"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={filters.yours}
+                    onChange={() => toggleFilter("yours")}
+                  />
+                }
+                label="Yours"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={filters.community}
+                    onChange={() => toggleFilter("community")}
+                  />
+                }
+                label="Community"
+              />
+            </FormGroup>
+          </Popover>
+        </Stack>
+      )}
 
       {!maps && !loadError && <MapListSkeleton />}
 
@@ -153,12 +274,49 @@ const MapsLibrary: React.FC = () => {
         </Typography>
       )}
 
+      {maps && maps.length > 0 && filteredMaps?.length === 0 && (
+        <Typography variant="body2" color="text.secondary">
+          {search
+            ? `No maps match "${search}".`
+            : "No maps match the selected filters."}
+        </Typography>
+      )}
+
       <Stack spacing={1}>
-        {maps?.map((map) => (
+        {filteredMaps?.map((map) => (
           <Paper
             key={map.id}
-            sx={{ display: "flex", alignItems: "center", gap: 2, p: 1 }}
+            onClick={() => handlePlay(map.id)}
+            sx={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              p: 1,
+              cursor: "pointer",
+              "&:hover": { bgcolor: "action.hover" },
+            }}
           >
+            {map.isOwn && (
+              <Tooltip title="Edit map">
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEdit(map);
+                  }}
+                  sx={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    zIndex: 1,
+                    bgcolor: "background.paper",
+                    "&:hover": { bgcolor: "action.hover" },
+                  }}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Box
               component="img"
               src={
@@ -181,36 +339,21 @@ const MapsLibrary: React.FC = () => {
                 <Typography variant="subtitle1" fontWeight={600} noWrap>
                   {map.name}
                 </Typography>
-                <Chip
-                  size="small"
-                  label={map.isPublic ? "Public" : "Private"}
-                  color={map.isPublic ? "success" : "default"}
-                />
+                {!map.isPublic && (
+                  <Tooltip title="Private">
+                    <VisibilityOffIcon fontSize="small" sx={{ color: "text.secondary" }} />
+                  </Tooltip>
+                )}
               </Stack>
-              <Typography variant="body2" color="text.secondary">
-                {map.isOwn ? "You" : map.ownerUsername ?? "Unknown"} · boundary scale{" "}
-                {map.maxErrorDistanceKm.toLocaleString()} km
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-              {map.isOwn && (
-                <>
-                  <Tooltip title="Edit map">
-                    <IconButton onClick={() => openEdit(map)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete map">
-                    <IconButton onClick={() => setDeleteTarget(map)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </>
+              {(map.isOwn || map.ownerUsername) && (
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <PersonIcon fontSize="inherit" color="action" />
+                  <Typography variant="body2" color="text.secondary">
+                    {map.isOwn ? "You" : map.ownerUsername}
+                  </Typography>
+                </Stack>
               )}
-              <Button variant="contained" onClick={() => handlePlay(map.id)}>
-                Play
-              </Button>
-            </Stack>
+            </Box>
           </Paper>
         ))}
       </Stack>
@@ -245,6 +388,23 @@ const MapsLibrary: React.FC = () => {
               label={edit?.isPublic ? "Public — anyone can play this map" : "Private — only you can play this map"}
             />
             {edit?.error && <Alert severity="error">{edit.error}</Alert>}
+
+            <Divider />
+
+            <Box>
+              <Typography variant="subtitle2" color="error" sx={{ mb: 1 }}>
+                Danger zone
+              </Typography>
+              <Button
+                onClick={() => edit && setDeleteTarget(edit.map)}
+                color="error"
+                variant="outlined"
+                startIcon={<DeleteIcon />}
+                fullWidth
+              >
+                Delete Map
+              </Button>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions>
