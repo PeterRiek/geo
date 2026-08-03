@@ -2,10 +2,8 @@ package me.peterrk.pan.backend.controller;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,8 +23,11 @@ import me.peterrk.pan.backend.service.GameMapService;
 @RequestMapping("/api/gamemap")
 public class GameMapController {
 
-  @Autowired
-  private GameMapService gameMapService;
+  private final GameMapService gameMapService;
+
+  public GameMapController(GameMapService gameMapService) {
+    this.gameMapService = gameMapService;
+  }
 
   @GetMapping()
   public ResponseEntity<?> getAllGameMaps() {
@@ -63,19 +64,15 @@ public class GameMapController {
     return ResponseEntity.status(HttpStatus.OK).body(location);
   }
 
+  // IllegalArgumentException (validation) and IOException (storage failure) are left to propagate
+  // to GlobalExceptionHandler, which maps them to 400 and 500 respectively.
   @PreAuthorize("hasAuthority('MANAGE_MAPS')")
   @PostMapping
   public ResponseEntity<?> uploadMap(
       @RequestParam("name") String name,
       @RequestParam("coordinates") MultipartFile coordinatesFile,
-      @RequestParam("image") MultipartFile imageFile) {
-    try {
-      GameMap gameMap = gameMapService.uploadMap(name, coordinatesFile, imageFile);
-      return ResponseEntity.status(HttpStatus.CREATED).body(gameMap);
-    } catch (IllegalArgumentException e) {
-      return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-    } catch (IOException e) {
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to store uploaded map"));
-    }
+      @RequestParam("image") MultipartFile imageFile) throws IOException {
+    GameMap gameMap = gameMapService.uploadMap(name, coordinatesFile, imageFile);
+    return ResponseEntity.status(HttpStatus.CREATED).body(gameMap);
   }
 }

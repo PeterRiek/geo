@@ -1,6 +1,5 @@
 package me.peterrk.pan.backend.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,11 +25,13 @@ public class GameSessionController {
 
   private static final int MAX_HISTORY_PAGE_SIZE = 50;
 
-  @Autowired
-  private UserRepository userRepository;
+  private final UserRepository userRepository;
+  private final GameHistoryService gameHistoryService;
 
-  @Autowired
-  private GameHistoryService gameHistoryService;
+  public GameSessionController(UserRepository userRepository, GameHistoryService gameHistoryService) {
+    this.userRepository = userRepository;
+    this.gameHistoryService = gameHistoryService;
+  }
 
   @GetMapping("/history")
   public ResponseEntity<?> getHistory(Authentication auth, @RequestParam(defaultValue = "0") int page,

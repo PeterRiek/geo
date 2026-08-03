@@ -12,7 +12,6 @@ import java.util.UUID;
 
 import javax.imageio.ImageIO;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -36,16 +35,18 @@ public class GameMapService {
       "image/jpeg", "jpg",
       "image/png", "png");
 
-  @Autowired
-  private GameMapRepository gameMapRepository;
-
-  @Autowired
-  private RestTemplate restTemplate;
+  private final GameMapRepository gameMapRepository;
+  private final RestTemplate restTemplate;
 
   @Value("${app.uploads.dir:uploads}")
   private String uploadsDir;
 
   private final ObjectMapper objectMapper = new ObjectMapper();
+
+  public GameMapService(GameMapRepository gameMapRepository, RestTemplate restTemplate) {
+    this.gameMapRepository = gameMapRepository;
+    this.restTemplate = restTemplate;
+  }
 
   public GameMap getGameMap(Long id) {
     return gameMapRepository.findById(id).orElse(null);
@@ -124,7 +125,7 @@ public class GameMapService {
     }
 
     byte[] coordinatesBytes = coordinatesFile.getBytes();
-    List<LatLng> parsed = validateCoordinates(coordinatesBytes);
+    validateCoordinates(coordinatesBytes);
 
     byte[] imageBytes = validateImage(imageFile);
     String imageExtension = ALLOWED_IMAGE_TYPES.get(imageFile.getContentType());
@@ -133,13 +134,24 @@ public class GameMapService {
     Files.createDirectories(imagesRoot());
 
     String coordinatesFileName = UUID.randomUUID() + ".json";
-    Files.write(coordinatesRoot().resolve(coordinatesFileName), coordinatesBytes);
-
+    Path coordinatesPath = coordinatesRoot().resolve(coordinatesFileName);
     String imageFileName = UUID.randomUUID() + "." + imageExtension;
-    Files.write(imagesRoot().resolve(imageFileName), imageBytes);
+    Path imagePath = imagesRoot().resolve(imageFileName);
 
-    GameMap gameMap = new GameMap(trimmedName, coordinatesFileName, "/uploads/images/" + imageFileName);
-    return gameMapRepository.save(gameMap);
+    // Neither the two file writes nor the DB save are transactional with each other, so on any
+    // failure past this point we clean up whatever already landed on disk rather than leaving an
+    // orphaned, unreferenced file behind.
+    try {
+      Files.write(coordinatesPath, coordinatesBytes);
+      Files.write(imagePath, imageBytes);
+
+      GameMap gameMap = new GameMap(trimmedName, coordinatesFileName, "/uploads/images/" + imageFileName);
+      return gameMapRepository.save(gameMap);
+    } catch (Exception e) {
+      Files.deleteIfExists(coordinatesPath);
+      Files.deleteIfExists(imagePath);
+      throw e;
+    }
   }
 
   private List<LatLng> validateCoordinates(byte[] coordinatesBytes) throws IOException {

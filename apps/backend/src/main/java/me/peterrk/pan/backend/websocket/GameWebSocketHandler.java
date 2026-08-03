@@ -1,5 +1,7 @@
 package me.peterrk.pan.backend.websocket;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -16,6 +18,8 @@ import me.peterrk.pan.backend.service.GameService;
 
 public class GameWebSocketHandler extends TextWebSocketHandler {
 
+  private static final Logger log = LoggerFactory.getLogger(GameWebSocketHandler.class);
+
   private final ObjectMapper mapper = new ObjectMapper();
 
   private final GameService gameService;
@@ -29,9 +33,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     ClientMessage msg = mapper.readValue(message.getPayload(), ClientMessage.class);
     String username = (String) session.getAttributes().get("username");
 
-    System.out.println("[" + username + "] - " + msg.roomId + " - " + msg.type + " - " + (msg.payload != null
-        ? (mapper.writeValueAsString(msg.payload))
-        : "/"));
+    log.debug("[{}] - {} - {}", username, msg.roomId, msg.type);
 
     switch (msg.type) {
       case "CREATE" -> {
