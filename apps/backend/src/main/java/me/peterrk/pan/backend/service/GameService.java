@@ -20,6 +20,9 @@ import me.peterrk.pan.backend.dto.GameSettings;
 import me.peterrk.pan.backend.dto.ws.LatLng;
 import me.peterrk.pan.backend.dto.ws.RoomState;
 import me.peterrk.pan.backend.dto.ws.ServerMessage;
+import me.peterrk.pan.backend.exception.MapAccessException;
+import me.peterrk.pan.backend.model.GameMap;
+import me.peterrk.pan.backend.util.GeoUtils;
 
 @Service
 public class GameService {
@@ -64,6 +67,15 @@ public class GameService {
           Math.min(MAX_ROUND_TIME_LIMIT_SECONDS, gameSettings.roundTimeLimitSeconds));
     }
 
+    GameMap map = gameMapService.getGameMap(gameSettings.mapId);
+    if (map == null || !gameMapService.canAccess(map, creatorUsername)) {
+      throw new MapAccessException("Map " + gameSettings.mapId + " is not accessible to " + creatorUsername);
+    }
+    // Never trust a client-supplied value here — always take the chosen map's own scoring range.
+    gameSettings.maxErrorDistanceKm = map.getMaxErrorDistanceKm() != null
+        ? map.getMaxErrorDistanceKm()
+        : GeoUtils.DEFAULT_MAX_ERROR_DISTANCE_KM;
+
     return rooms.computeIfAbsent(roomId, id -> {
       RoomState room = new RoomState();
       room.roomId = roomId;
@@ -72,6 +84,8 @@ public class GameService {
       room.roomPhase = RoomState.RoomPhase.WAITING;
       room.roundCount = 0;
       room.allGuesses = new ArrayList<Map<String, LatLng>>();
+      room.allDistances = new ArrayList<Map<String, Double>>();
+      room.allScores = new ArrayList<Map<String, Integer>>();
       room.allTargets = new ArrayList<LatLng>();
 
       // A solo room has no one else to wait on, so it starts itself immediately.
@@ -162,6 +176,42 @@ public class GameService {
     currentRoundGuesses(room).putIfAbsent(username, guess);
   }
 
+  private Map<String, Double> currentRoundDistances(RoomState room) {
+    while (room.allDistances.size() - 1 < room.roundCount) {
+      room.allDistances.add(new HashMap<String, Double>());
+    }
+    return room.allDistances.get(room.roundCount);
+  }
+
+  private Map<String, Integer> currentRoundScores(RoomState room) {
+    while (room.allScores.size() - 1 < room.roundCount) {
+      room.allScores.add(new HashMap<String, Integer>());
+    }
+    return room.allScores.get(room.roundCount);
+  }
+
+  /** Must be called while holding `synchronized (room)`; the round's target must already exist. */
+  private void computeRoundResults(RoomState room) {
+    LatLng target = room.allTargets.get(room.roundCount);
+    Map<String, LatLng> guesses = currentRoundGuesses(room);
+    Map<String, Double> distances = currentRoundDistances(room);
+    Map<String, Integer> scores = currentRoundScores(room);
+    double maxErrorDistanceKm = room.roomSettings.maxErrorDistanceKm != null
+        ? room.roomSettings.maxErrorDistanceKm
+        : GeoUtils.DEFAULT_MAX_ERROR_DISTANCE_KM;
+    for (String player : room.players) {
+      LatLng guess = guesses.get(player);
+      if (guess == null) {
+        distances.put(player, null);
+        scores.put(player, 0);
+        continue;
+      }
+      double distanceKm = GeoUtils.distanceKm(target, guess);
+      distances.put(player, distanceKm);
+      scores.put(player, GeoUtils.score(distanceKm, maxErrorDistanceKm));
+    }
+  }
+
   /**
    * Must be called while holding `synchronized (room)`. Always lands on ROUND_RESULTS, even for
    * the last round — players should see that round's result before the game summary, not skip
@@ -173,6 +223,7 @@ public class GameService {
       broadcast(room.roomId, new ServerMessage("GUESS_SUBMITTED", room));
       return;
     }
+    computeRoundResults(room);
     room.roomPhase = RoomState.RoomPhase.ROUND_RESULTS;
     broadcast(room.roomId, new ServerMessage("ROUND_RESULTS", room));
   }

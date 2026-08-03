@@ -1,21 +1,21 @@
 import { auth } from "@/auth";
 import GameFallback from "@/components/game/game-fallback";
-import UploadMapForm from "@/components/game/menu/UploadMapForm";
+import MapsLibrary from "@/components/game/menu/MapsLibrary";
 
-const UploadMapPage = async () => {
+const MapsPage = async () => {
   const session = await auth();
 
   if (!session?.accessToken) {
     return (
       <GameFallback
         variant="error"
-        title="You need to be signed in to upload a map."
+        title="You need to be signed in to view maps."
         description="Please sign in and try again."
       />
     );
   }
 
-  return <UploadMapForm />;
+  return <MapsLibrary />;
 };
 
-export default UploadMapPage;
+export default MapsPage;

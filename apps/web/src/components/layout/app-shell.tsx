@@ -6,11 +6,10 @@ import AppHeader from "./app-header";
 
 interface Props {
   username: string | null;
-  canManageMaps?: boolean;
   children: React.ReactNode;
 }
 
-const AppShell: React.FC<Props> = ({ username, canManageMaps, children }) => {
+const AppShell: React.FC<Props> = ({ username, children }) => {
   const pathname = usePathname();
   const isFullScreenView =
     pathname?.startsWith("/game/play") || pathname?.startsWith("/history/");
@@ -21,7 +20,7 @@ const AppShell: React.FC<Props> = ({ username, canManageMaps, children }) => {
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <AppHeader username={username} canManageMaps={canManageMaps} />
+      <AppHeader username={username} />
       <Box component="main" sx={{ flex: 1, minHeight: 0 }}>
         {children}
       </Box>

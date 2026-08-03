@@ -28,7 +28,6 @@ import me.peterrk.pan.backend.repository.GameRoundRepository;
 import me.peterrk.pan.backend.repository.GameSessionPlayerRepository;
 import me.peterrk.pan.backend.repository.GameSessionRepository;
 import me.peterrk.pan.backend.repository.UserRepository;
-import me.peterrk.pan.backend.util.GeoUtils;
 
 /**
  * Writes a finished room to the database as a results record. This is the only place game data
@@ -102,17 +101,19 @@ public class GameHistoryService {
       Map<String, LatLng> guesses = room.allGuesses != null && roundIndex < room.allGuesses.size()
           ? room.allGuesses.get(roundIndex)
           : Map.of();
+      Map<String, Double> distances = room.allDistances != null && roundIndex < room.allDistances.size()
+          ? room.allDistances.get(roundIndex)
+          : Map.of();
+      Map<String, Integer> scores = room.allScores != null && roundIndex < room.allScores.size()
+          ? room.allScores.get(roundIndex)
+          : Map.of();
 
       for (Map.Entry<String, GameSessionPlayer> entry : playersByUsername.entrySet()) {
         LatLng guess = guesses.get(entry.getKey());
         GameSessionPlayer player = entry.getValue();
 
-        Double distanceKm = null;
-        int score = 0;
-        if (guess != null) {
-          distanceKm = GeoUtils.distanceKm(target, guess);
-          score = GeoUtils.score(distanceKm);
-        }
+        Double distanceKm = guess != null ? distances.get(entry.getKey()) : null;
+        int score = guess != null ? scores.getOrDefault(entry.getKey(), 0) : 0;
 
         gameGuessRepository.save(new GameGuess(round, player,
             guess != null ? guess.lat : null, guess != null ? guess.lng : null,

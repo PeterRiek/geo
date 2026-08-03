@@ -67,6 +67,12 @@ const HistoryDetail: React.FC<{ id: string; username: string }> = ({ id, usernam
         .map((g) => [g.username, { lat: g.lat as number, lng: g.lng as number }])
     )
   );
+  const allScores: { [username: string]: number }[] = detail.rounds.map((r) =>
+    Object.fromEntries(r.guesses.map((g) => [g.username, g.score]))
+  );
+  const allDistances: { [username: string]: number | null }[] = detail.rounds.map((r) =>
+    Object.fromEntries(r.guesses.map((g) => [g.username, g.distanceKm]))
+  );
 
   return (
     <Box sx={{ height: "100%" }}>
@@ -75,6 +81,8 @@ const HistoryDetail: React.FC<{ id: string; username: string }> = ({ id, usernam
         players={detail.players.map((p) => p.username)}
         allGuesses={allGuesses}
         allTargets={allTargets}
+        allScores={allScores}
+        allDistances={allDistances}
         backHref="/history"
         backLabel="BACK TO HISTORY"
       />

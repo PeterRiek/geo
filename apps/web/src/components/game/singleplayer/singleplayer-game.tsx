@@ -4,7 +4,7 @@ import { Coords } from "@/types/geo";
 import { Fade, useMediaQuery, useTheme } from "@mui/material";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
-import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
+import { getCenterCoords } from "@/lib/geo";
 import RoundResultView from "@/components/game/singleplayer/views/round-result-view";
 import InGameView from "@/components/game/singleplayer/views/ingame-view";
 import PostgameView from "@/components/game/singleplayer/views/postgame-view";
@@ -127,6 +127,8 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
           players={gameState.players}
           allGuesses={gameState.allGuesses}
           allTargets={gameState.allTargets}
+          allScores={gameState.allScores}
+          allDistances={gameState.allDistances}
         />
       );
     } else if (
@@ -154,8 +156,8 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
       phaseKey = `result-${gameState.roundCount}`;
       const userGuess = gameState.allGuesses[gameState.roundCount]?.[username];
       const target = gameState.allTargets[gameState.roundCount];
-      const distance = userGuess ? getDistanceInKm(userGuess, target) : -1;
-      const score = userGuess ? getGuessrScore(distance, 10_000) : 0;
+      const distance = gameState.allDistances[gameState.roundCount]?.[username] ?? -1;
+      const score = gameState.allScores[gameState.roundCount]?.[username] ?? 0;
       const center = userGuess ? getCenterCoords(userGuess, target) : { lat: 0, lng: 0 };
       const zoom = 1 + (score / 5000) * 8;
 

@@ -14,6 +14,7 @@ import me.peterrk.pan.backend.dto.ws.ClientMessage;
 import me.peterrk.pan.backend.dto.ws.LatLng;
 import me.peterrk.pan.backend.dto.ws.RoomState;
 import me.peterrk.pan.backend.dto.ws.ServerMessage;
+import me.peterrk.pan.backend.exception.MapAccessException;
 import me.peterrk.pan.backend.service.GameService;
 
 public class GameWebSocketHandler extends TextWebSocketHandler {
@@ -43,12 +44,16 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
           return;
         }
         RoomState roomState = null;
-        if (msg.payload != null) {
-
-          GameSettings roomSettings = mapper.convertValue(msg.payload, GameSettings.class);
-          roomState = gameService.createRoom(msg.roomId, roomSettings, username);
-        } else {
-          roomState = gameService.createRoom(msg.roomId, username);
+        try {
+          if (msg.payload != null) {
+            GameSettings roomSettings = mapper.convertValue(msg.payload, GameSettings.class);
+            roomState = gameService.createRoom(msg.roomId, roomSettings, username);
+          } else {
+            roomState = gameService.createRoom(msg.roomId, username);
+          }
+        } catch (MapAccessException e) {
+          session.sendMessage(new TextMessage(mapper.writeValueAsBytes(new ServerMessage("MAP_NOT_ACCESSIBLE"))));
+          return;
         }
         ServerMessage response = new ServerMessage("CREATED_ROOM", roomState);
         session.sendMessage(new TextMessage(mapper.writeValueAsString(response)));

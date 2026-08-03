@@ -12,7 +12,10 @@ import java.util.UUID;
 
 import javax.imageio.ImageIO;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,13 +25,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import me.peterrk.pan.backend.dto.ws.LatLng;
 import me.peterrk.pan.backend.model.GameMap;
+import me.peterrk.pan.backend.model.User;
 import me.peterrk.pan.backend.repository.GameMapRepository;
 
 @Service
 public class GameMapService {
 
+  private static final Logger log = LoggerFactory.getLogger(GameMapService.class);
+
   private static final int MAX_COORDINATE_COUNT = 20_000;
   private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
+  private static final double MAX_ERROR_DISTANCE_KM_LIMIT = 20_000;
   // Limited to formats the JDK's built-in ImageIO can decode (used below to verify the upload is
   // a genuine image, not just a file with a spoofed content-type) — no webp plugin on the classpath.
   private static final Map<String, String> ALLOWED_IMAGE_TYPES = Map.of(
@@ -52,12 +59,20 @@ public class GameMapService {
     return gameMapRepository.findById(id).orElse(null);
   }
 
-  public GameMap getGameMap(String name) {
-    return gameMapRepository.findByName(name).orElse(null);
+  public List<GameMap> getVisibleGameMaps(User currentUser) {
+    return gameMapRepository.findVisibleTo(currentUser.getId());
   }
 
-  public List<GameMap> getAllGameMaps() {
-    return gameMapRepository.findAll();
+  public boolean canAccess(GameMap map, String username) {
+    return isEffectivelyPublic(map) || (map.getOwner() != null && map.getOwner().getUsername().equals(username));
+  }
+
+  public boolean isOwner(GameMap map, User user) {
+    return map.getOwner() != null && user != null && map.getOwner().getId().equals(user.getId());
+  }
+
+  private boolean isEffectivelyPublic(GameMap map) {
+    return map.getIsPublic() == null || map.getIsPublic();
   }
 
   public List<LatLng> getCustomCoordinates(Long mapId) {
@@ -109,13 +124,11 @@ public class GameMapService {
    * GameMap row. Throws IllegalArgumentException for validation failures (caller should respond
    * 400) and IOException for storage failures (caller should respond 500).
    */
-  public GameMap uploadMap(String name, MultipartFile coordinatesFile, MultipartFile imageFile) throws IOException {
+  public GameMap uploadMap(String name, MultipartFile coordinatesFile, MultipartFile imageFile, User owner,
+      boolean isPublic, Double maxErrorDistanceKm) throws IOException {
     String trimmedName = name == null ? "" : name.trim();
     if (trimmedName.isEmpty()) {
       throw new IllegalArgumentException("Map name is required");
-    }
-    if (gameMapRepository.findByName(trimmedName).isPresent()) {
-      throw new IllegalArgumentException("A map named \"" + trimmedName + "\" already exists");
     }
     if (coordinatesFile == null || coordinatesFile.isEmpty()) {
       throw new IllegalArgumentException("A coordinates JSON file is required");
@@ -123,6 +136,7 @@ public class GameMapService {
     if (imageFile == null || imageFile.isEmpty()) {
       throw new IllegalArgumentException("A preview image is required");
     }
+    validateMaxErrorDistance(maxErrorDistanceKm);
 
     byte[] coordinatesBytes = coordinatesFile.getBytes();
     validateCoordinates(coordinatesBytes);
@@ -146,11 +160,87 @@ public class GameMapService {
       Files.write(imagePath, imageBytes);
 
       GameMap gameMap = new GameMap(trimmedName, coordinatesFileName, "/uploads/images/" + imageFileName);
+      gameMap.setOwner(owner);
+      gameMap.setIsPublic(isPublic);
+      gameMap.setMaxErrorDistanceKm(maxErrorDistanceKm);
       return gameMapRepository.save(gameMap);
     } catch (Exception e) {
       Files.deleteIfExists(coordinatesPath);
       Files.deleteIfExists(imagePath);
       throw e;
+    }
+  }
+
+  /**
+   * Partial update — only non-null arguments are applied. Throws AccessDeniedException unless the
+   * caller owns the map or holds MANAGE_MAPS (admin override, e.g. for ownerless legacy rows).
+   */
+  public GameMap updateMap(Long mapId, String name, Boolean isPublic, Double maxErrorDistanceKm, User currentUser,
+      boolean isAdmin) {
+    GameMap map = getGameMap(mapId);
+    if (map == null) {
+      return null;
+    }
+    if (!isOwner(map, currentUser) && !isAdmin) {
+      throw new AccessDeniedException("Not allowed to edit this map");
+    }
+    if (name != null) {
+      String trimmedName = name.trim();
+      if (trimmedName.isEmpty()) {
+        throw new IllegalArgumentException("Map name is required");
+      }
+      map.setName(trimmedName);
+    }
+    if (isPublic != null) {
+      map.setIsPublic(isPublic);
+    }
+    if (maxErrorDistanceKm != null) {
+      validateMaxErrorDistance(maxErrorDistanceKm);
+      map.setMaxErrorDistanceKm(maxErrorDistanceKm);
+    }
+    return gameMapRepository.save(map);
+  }
+
+  /** Throws AccessDeniedException under the same rules as {@link #updateMap}. Returns false if not found. */
+  public boolean deleteMap(Long mapId, User currentUser, boolean isAdmin) {
+    GameMap map = getGameMap(mapId);
+    if (map == null) {
+      return false;
+    }
+    if (!isOwner(map, currentUser) && !isAdmin) {
+      throw new AccessDeniedException("Not allowed to delete this map");
+    }
+    gameMapRepository.delete(map);
+    deleteLocalFileIfAny(coordinatesRoot(), map.getJsonFileUrl());
+    if (map.getImageUrl() != null && map.getImageUrl().startsWith("/uploads/images/")) {
+      deleteLocalFileIfAny(imagesRoot(), map.getImageUrl().substring("/uploads/images/".length()));
+    }
+    return true;
+  }
+
+  // Best-effort cleanup: mirrors the rollback cleanup in uploadMap, but a failure here shouldn't
+  // block the (already-committed) DB deletion — just leaves an orphaned file, logged for cleanup.
+  private void deleteLocalFileIfAny(Path root, String relativePath) {
+    if (relativePath == null || relativePath.startsWith("http://") || relativePath.startsWith("https://")) {
+      return;
+    }
+    try {
+      Path path = root.resolve(relativePath).normalize();
+      if (path.startsWith(root)) {
+        Files.deleteIfExists(path);
+      }
+    } catch (IOException e) {
+      log.warn("Failed to delete map file {}", relativePath, e);
+    }
+  }
+
+  private void validateMaxErrorDistance(Double maxErrorDistanceKm) {
+    if (maxErrorDistanceKm == null) {
+      return;
+    }
+    if (maxErrorDistanceKm <= 0 || maxErrorDistanceKm > MAX_ERROR_DISTANCE_KM_LIMIT) {
+      throw new IllegalArgumentException(
+          "Boundary scale must be between 0 and " + (int) MAX_ERROR_DISTANCE_KM_LIMIT + " km");
     }
   }
 

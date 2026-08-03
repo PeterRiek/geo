@@ -1,7 +1,7 @@
 "use client";
 
 import { Coords } from "@/types/geo";
-import { getCenterCoords, getDistanceInKm, getGuessrScore, formatDistance } from "@/lib/geo";
+import { getCenterCoords, formatDistance } from "@/lib/geo";
 import {
   Box,
   Button,
@@ -23,6 +23,8 @@ interface Props {
   players: string[];
   allGuesses: { [username: string]: Coords | null }[];
   allTargets: Coords[];
+  allScores: { [username: string]: number }[];
+  allDistances: { [username: string]: number | null }[];
   backHref?: string;
   backLabel?: string;
 }
@@ -32,6 +34,8 @@ const PostgameView: React.FC<Props> = ({
   players,
   allTargets,
   allGuesses,
+  allScores,
+  allDistances,
   backHref = "/game",
   backLabel = "BACK TO MENU",
 }) => {
@@ -40,15 +44,10 @@ const PostgameView: React.FC<Props> = ({
   const scoresByPlayer = useMemo(() => {
     const result: Record<string, number[]> = {};
     for (const player of players) {
-      result[player] = allGuesses.map((guesses, i) => {
-        const guess = guesses[player];
-        const target = allTargets[i];
-        if (!guess || !target) return 0;
-        return getGuessrScore(getDistanceInKm(guess, target), 10_000);
-      });
+      result[player] = allScores.map((scores) => scores[player] ?? 0);
     }
     return result;
-  }, [players, allGuesses, allTargets]);
+  }, [players, allScores]);
 
   const overallStandings = useMemo(
     () =>
@@ -77,9 +76,7 @@ const PostgameView: React.FC<Props> = ({
   const currentGuess = round !== undefined ? allGuesses[round]?.[username] : undefined;
   const currentTarget = round !== undefined ? allTargets[round] : undefined;
   const currentDistance =
-    currentGuess && currentTarget
-      ? getDistanceInKm(currentGuess, currentTarget)
-      : undefined;
+    round !== undefined ? allDistances[round]?.[username] ?? undefined : undefined;
   const currentCenter =
     currentGuess && currentTarget
       ? getCenterCoords(currentGuess, currentTarget)

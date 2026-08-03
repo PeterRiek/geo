@@ -22,7 +22,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import PublicIcon from "@mui/icons-material/Public";
 import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
 import HistoryIcon from "@mui/icons-material/History";
-import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
+import MapIcon from "@mui/icons-material/Map";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
 import LoginIcon from "@mui/icons-material/Login";
@@ -34,10 +34,9 @@ import ColorModeToggle from "./color-mode-toggle";
 
 interface Props {
   username: string | null;
-  canManageMaps?: boolean;
 }
 
-const AppHeader: React.FC<Props> = ({ username, canManageMaps }) => {
+const AppHeader: React.FC<Props> = ({ username }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -81,15 +80,9 @@ const AppHeader: React.FC<Props> = ({ username, canManageMaps }) => {
             <Button component={Link} href="/history" startIcon={<HistoryIcon />}>
               History
             </Button>
-            {canManageMaps && (
-              <Button
-                component={Link}
-                href="/game/maps/upload"
-                startIcon={<AddPhotoAlternateIcon />}
-              >
-                Upload Map
-              </Button>
-            )}
+            <Button component={Link} href="/game/maps" startIcon={<MapIcon />}>
+              Maps
+            </Button>
             <Button component={Link} href="/profile" startIcon={<AccountCircleIcon />}>
               Profile
             </Button>
@@ -153,18 +146,16 @@ const AppHeader: React.FC<Props> = ({ username, canManageMaps }) => {
                       </ListItemIcon>
                       <ListItemText>History</ListItemText>
                     </ListItemButton>
-                    {canManageMaps && (
-                      <ListItemButton
-                        component={Link}
-                        href="/game/maps/upload"
-                        onClick={closeSidebar}
-                      >
-                        <ListItemIcon>
-                          <AddPhotoAlternateIcon fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Upload Map</ListItemText>
-                      </ListItemButton>
-                    )}
+                    <ListItemButton
+                      component={Link}
+                      href="/game/maps"
+                      onClick={closeSidebar}
+                    >
+                      <ListItemIcon>
+                        <MapIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText>Maps</ListItemText>
+                    </ListItemButton>
                     <ListItemButton
                       component={Link}
                       href="/profile"

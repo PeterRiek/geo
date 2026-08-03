@@ -21,6 +21,10 @@ public class RoomState {
 
   public List<LatLng> allTargets;
   public List<Map<String, LatLng>> allGuesses;
+  // Populated by GameService once a round's guesses are all in — the server-authoritative
+  // distance/score so clients don't need to recompute from raw coordinates.
+  public List<Map<String, Double>> allDistances;
+  public List<Map<String, Integer>> allScores;
   public int roundCount;
   public List<String> players = new ArrayList<>();
 

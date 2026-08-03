@@ -2,16 +2,14 @@
 
 import React from "react";
 import { Alert, Box, Button, Container, Paper } from "@mui/material";
-import MapSelect from "./MapSelect";
+import SelectedMapSummary from "./SelectedMapSummary";
 import NMPZSelect from "./NMPZSelect";
 
 // eslint-disable-next-line
 const SingleplayerSettings: React.FC<any> = ({
   maps,
   selectedMap,
-  setSelectedMap,
   mapsLoading,
-  scrollPositionRef,
   moveEnabled,
   panEnabled,
   zoomEnabled,
@@ -48,14 +46,8 @@ const SingleplayerSettings: React.FC<any> = ({
         pb: 3,
       }}
     >
-      <Paper sx={{ p: 1, flex: 1, minHeight: 0, display: "flex" }}>
-        <MapSelect
-          maps={maps}
-          selectedMap={selectedMap}
-          setSelectedMap={setSelectedMap}
-          mapsLoading={mapsLoading}
-          scrollPositionRef={scrollPositionRef}
-        />
+      <Paper sx={{ p: 1 }}>
+        <SelectedMapSummary maps={maps} selectedMap={selectedMap} mapsLoading={mapsLoading} />
       </Paper>
       <Paper sx={{ p: 1 }}>
         <NMPZSelect

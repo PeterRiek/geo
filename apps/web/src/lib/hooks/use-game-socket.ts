@@ -22,6 +22,8 @@ interface GameState {
   roomSettings: GameSettings;
   allTargets: Coords[];
   allGuesses: { [username: string]: Coords }[];
+  allDistances: { [username: string]: number | null }[];
+  allScores: { [username: string]: number }[];
   players: string[];
   roundEndsAt?: number;
   disconnectedPlayers?: string[];
@@ -110,6 +112,9 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
           break;
         case "ROOM_NOT_FOUND":
           setRoomError("Room not found.");
+          break;
+        case "MAP_NOT_ACCESSIBLE":
+          setRoomError("That map isn't available to you anymore. Pick another one.");
           break;
       }
     };
