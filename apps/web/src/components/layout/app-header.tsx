@@ -21,6 +21,7 @@ import { useColorScheme } from "@mui/material/styles";
 import MenuIcon from "@mui/icons-material/Menu";
 import PublicIcon from "@mui/icons-material/Public";
 import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
+import HistoryIcon from "@mui/icons-material/History";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
 import LoginIcon from "@mui/icons-material/Login";
@@ -75,6 +76,9 @@ const AppHeader: React.FC<Props> = ({ username }) => {
             <Button component={Link} href="/game" startIcon={<SportsEsportsIcon />}>
               Play
             </Button>
+            <Button component={Link} href="/history" startIcon={<HistoryIcon />}>
+              History
+            </Button>
             <Button component={Link} href="/profile" startIcon={<AccountCircleIcon />}>
               {username}
             </Button>
@@ -127,6 +131,16 @@ const AppHeader: React.FC<Props> = ({ username }) => {
                         <SportsEsportsIcon fontSize="small" />
                       </ListItemIcon>
                       <ListItemText>Play</ListItemText>
+                    </ListItemButton>
+                    <ListItemButton
+                      component={Link}
+                      href="/history"
+                      onClick={closeSidebar}
+                    >
+                      <ListItemIcon>
+                        <HistoryIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText>History</ListItemText>
                     </ListItemButton>
                     <ListItemButton
                       component={Link}

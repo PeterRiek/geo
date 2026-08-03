@@ -14,19 +14,23 @@ const NMPZSelect: React.FC<{
   panEnabled: boolean;
   zoomEnabled: boolean;
   roundCount: number;
+  roundTimeLimitSeconds: number;
   setMoveEnabled: (val: boolean) => void;
   setPanEnabled: (val: boolean) => void;
   setZoomEnabled: (val: boolean) => void;
   setRoundCount: (val: number) => void;
+  setRoundTimeLimitSeconds: (val: number) => void;
 }> = ({
   moveEnabled,
   panEnabled,
   zoomEnabled,
   roundCount,
+  roundTimeLimitSeconds,
   setMoveEnabled,
   setPanEnabled,
   setZoomEnabled,
   setRoundCount,
+  setRoundTimeLimitSeconds,
 }) => (
   <Stack
     direction="row"
@@ -68,6 +72,16 @@ const NMPZSelect: React.FC<{
         step={1}
         min={1}
         max={10}
+      />
+    </Stack>
+    <Stack spacing={1} alignItems="center" width={200}>
+      <Typography variant="body2">Time limit: {roundTimeLimitSeconds}s</Typography>
+      <Slider
+        value={roundTimeLimitSeconds}
+        onChange={(e, value) => setRoundTimeLimitSeconds(value as number)}
+        step={15}
+        min={15}
+        max={300}
       />
     </Stack>
   </Stack>

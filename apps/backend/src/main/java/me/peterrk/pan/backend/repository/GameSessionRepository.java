@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Repository
 public interface GameSessionRepository extends JpaRepository<GameSession, Long> {
 
-  @Query("SELECT COUNT(gs) FROM GameSession gs WHERE gs.user = :user AND gs.playedAt >= :startOfDay AND gs.playedAt < :startOfNextDay")
+  @Query("SELECT COUNT(gs) FROM GameSession gs WHERE gs.user = :user AND gs.mode = me.peterrk.pan.backend.model.GameSession.Mode.SINGLEPLAYER AND gs.playedAt >= :startOfDay AND gs.playedAt < :startOfNextDay")
   int countTodayByUser(User user, LocalDateTime startOfDay, LocalDateTime startOfNextDay);
 
 }

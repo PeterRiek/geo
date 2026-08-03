@@ -19,6 +19,7 @@ interface Props {
   zoomEnabled?: boolean;
   round?: number;
   totalRounds?: number;
+  secondsLeft?: number;
 }
 
 const InGameView: React.FC<Props> = ({
@@ -35,6 +36,7 @@ const InGameView: React.FC<Props> = ({
   zoomEnabled,
   round,
   totalRounds,
+  secondsLeft,
 }) => {
   const buttonLabel = roundFinished
     ? "DONE"
@@ -46,7 +48,7 @@ const InGameView: React.FC<Props> = ({
     <>
       <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
         {round !== undefined && totalRounds !== undefined && (
-          <RoundHud round={round} totalRounds={totalRounds} />
+          <RoundHud round={round} totalRounds={totalRounds} secondsLeft={secondsLeft} />
         )}
         <StreetViewPano
           location={targetLocation}

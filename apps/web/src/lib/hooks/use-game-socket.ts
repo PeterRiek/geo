@@ -3,12 +3,16 @@
 import { Coords } from "@/types/geo";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+export type GameMode = "SINGLEPLAYER" | "MULTIPLAYER";
+
 interface GameSettings {
   mapId: number;
   allowMove: boolean;
   allowPan: boolean;
   allowZoom: boolean;
   roundCount: number;
+  roundTimeLimitSeconds: number;
+  gameMode: GameMode;
 }
 
 interface GameState {
@@ -19,11 +23,13 @@ interface GameState {
   allTargets: Coords[];
   allGuesses: { [username: string]: Coords }[];
   players: string[];
+  roundEndsAt?: number;
+  disconnectedPlayers?: string[];
 }
 
 export type ConnectionStatus = "connecting" | "open" | "closed" | "error";
 
-const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
+const useGameSocket = (roomId?: string, accessToken?: string) => {
   const socketRef = useRef<WebSocket | null>(null);
   const pendingMessagesRef = useRef<string[]>([]);
   const [gameState, setGameState] = useState<GameState>();
@@ -44,7 +50,7 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
   useEffect(() => {
     setConnectionStatus("connecting");
     const ws = new WebSocket(
-      `${process.env.NEXT_PUBLIC_WS_URL}/duel?token=${accessToken}`
+      `${process.env.NEXT_PUBLIC_WS_URL}/game?token=${accessToken}`
     );
     socketRef.current = ws;
 
@@ -81,6 +87,9 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
           setGameState(message.payload);
           break;
         case "GUESS_SUBMITTED":
+          setGameState(message.payload);
+          break;
+        case "PLAYER_STATUS":
           setGameState(message.payload);
           break;
         case "CREATED_ROOM":
@@ -139,4 +148,4 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
   };
 };
 
-export default useMultiplayerSocket;
+export default useGameSocket;

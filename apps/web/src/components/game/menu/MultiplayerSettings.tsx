@@ -41,6 +41,8 @@ const MultiplayerSettings: React.FC<any> = ({
   roomError,
   roundCount,
   setRoundCount,
+  roundTimeLimitSeconds,
+  setRoundTimeLimitSeconds,
 }) => {
   const [linkCopied, setLinkCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
@@ -151,10 +153,12 @@ const MultiplayerSettings: React.FC<any> = ({
               panEnabled={panEnabled}
               zoomEnabled={zoomEnabled}
               roundCount={roundCount}
+              roundTimeLimitSeconds={roundTimeLimitSeconds}
               setMoveEnabled={setMoveEnabled}
               setPanEnabled={setPanEnabled}
               setZoomEnabled={setZoomEnabled}
               setRoundCount={setRoundCount}
+              setRoundTimeLimitSeconds={setRoundTimeLimitSeconds}
             />
           </Paper>
           <Paper sx={{ p: 1 }}>
@@ -194,6 +198,8 @@ const MultiplayerSettings: React.FC<any> = ({
                 allowZoom: zoomEnabled,
                 mapId: selectedMap ?? -1,
                 roundCount: roundCount,
+                roundTimeLimitSeconds: roundTimeLimitSeconds,
+                gameMode: "MULTIPLAYER",
               });
             }}
             variant="contained"

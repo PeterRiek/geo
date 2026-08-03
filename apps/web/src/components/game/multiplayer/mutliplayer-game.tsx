@@ -1,6 +1,7 @@
 "use client";
 
-import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
+import useGameSocket from "@/lib/hooks/use-game-socket";
+import useCountdown from "@/lib/hooks/use-countdown";
 import { Coords } from "@/types/geo";
 import {
   Alert,
@@ -43,7 +44,9 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   // load searchparam.roomId into useMultiplaerSocker
 
   const { gameState, connectionStatus, join, startGame, nextRound, submitGuess, reconnect } =
-    useMultiplayerSocket(roomId ?? "default", accessToken);
+    useGameSocket(roomId ?? "default", accessToken);
+
+  const secondsLeft = useCountdown(gameState?.roundEndsAt);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -271,13 +274,20 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
               Players ({playerCount})
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {gameState.players?.map((player) => (
-                <Chip
-                  key={player}
-                  label={player === username ? `${player} (you)` : player}
-                  color={player === username ? "primary" : "default"}
-                />
-              ))}
+              {gameState.players?.map((player) => {
+                const disconnected = gameState.disconnectedPlayers?.includes(player);
+                return (
+                  <Chip
+                    key={player}
+                    label={
+                      (player === username ? `${player} (you)` : player) +
+                      (disconnected ? " – disconnected" : "")
+                    }
+                    color={player === username ? "primary" : "default"}
+                    sx={disconnected ? { opacity: 0.5 } : undefined}
+                  />
+                );
+              })}
             </Stack>
           </Paper>
           <Stack direction="row" spacing={2} alignItems="center">
@@ -331,6 +341,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
             zoomEnabled={gameSettings.allowZoom}
             round={gameState.roundCount + 1}
             totalRounds={gameSettings.roundCount}
+            secondsLeft={secondsLeft}
           />
           {roundFinished && (
             <Chip

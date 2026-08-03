@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Container, Paper } from "@mui/material";
+import { Alert, Box, Button, Container, Paper } from "@mui/material";
 import MapSelect from "./MapSelect";
 import NMPZSelect from "./NMPZSelect";
 
@@ -20,6 +20,11 @@ const SingleplayerSettings: React.FC<any> = ({
   setZoomEnabled,
   roundCount,
   setRoundCount,
+  roundTimeLimitSeconds,
+  setRoundTimeLimitSeconds,
+  onStart,
+  isStarting,
+  startError,
 }) => (
   <Box
     sx={{
@@ -58,18 +63,22 @@ const SingleplayerSettings: React.FC<any> = ({
           panEnabled={panEnabled}
           zoomEnabled={zoomEnabled}
           roundCount={roundCount}
+          roundTimeLimitSeconds={roundTimeLimitSeconds}
           setMoveEnabled={setMoveEnabled}
           setPanEnabled={setPanEnabled}
           setZoomEnabled={setZoomEnabled}
           setRoundCount={setRoundCount}
+          setRoundTimeLimitSeconds={setRoundTimeLimitSeconds}
         />
       </Paper>
+      {startError && <Alert severity="error">{startError}</Alert>}
       <Button
-        href={`/game/play/sp/?mapId=${selectedMap}&allowMove=${moveEnabled}&allowPan=${panEnabled}&allowZoom=${zoomEnabled}&rounds=${roundCount}`}
+        onClick={onStart}
         variant="contained"
         size="large"
         fullWidth
-        disabled={!selectedMap}
+        loading={isStarting}
+        disabled={!selectedMap || isStarting}
       >
         {selectedMap
           ? `Play ${

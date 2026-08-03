@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Divider } from "@mui/material";
-import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
+import useGameSocket from "@/lib/hooks/use-game-socket";
 import { generateRoomCode } from "@/lib/room-code";
 import ModeSelect from "./menu/ModeSelect";
 import SingleplayerSettings from "./menu/SingleplayerSettings";
@@ -15,6 +15,8 @@ interface RoomSettings {
   allowPan: boolean;
   allowZoom: boolean;
   roundCount: number;
+  roundTimeLimitSeconds: number;
+  gameMode: "SINGLEPLAYER" | "MULTIPLAYER";
 }
 
 const CREATE_ROOM_TIMEOUT_MS = 10_000;
@@ -35,13 +37,15 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   const [panEnabled, setPanEnabled] = useState(true);
   const [zoomEnabled, setZoomEnabled] = useState(true);
   const [roundCount, setRoundCount] = useState(5);
+  const [roundTimeLimitSeconds, setRoundTimeLimitSeconds] = useState(60);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [connectionError, setConnectionError] = useState<string>();
+  const [pendingMode, setPendingMode] = useState<"singleplayer" | "multiplayer">();
   const scrollPositionRef = useRef<number>(0);
   const createTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const { createRoom, createdRoomId, roomError, connectionStatus } =
-    useMultiplayerSocket(undefined, accessToken);
+    useGameSocket(undefined, accessToken);
 
   const clearCreateTimeout = () => {
     if (createTimeoutRef.current) {
@@ -53,7 +57,32 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   const handleCreateRoom = (id: string, settings: RoomSettings) => {
     setConnectionError(undefined);
     setIsCreatingRoom(true);
+    setPendingMode("multiplayer");
     createRoom(id, settings);
+
+    clearCreateTimeout();
+    createTimeoutRef.current = setTimeout(() => {
+      setIsCreatingRoom(false);
+      setConnectionError(
+        "Couldn't reach the game server. Check your connection and try again."
+      );
+    }, CREATE_ROOM_TIMEOUT_MS);
+  };
+
+  const handleStartSingleplayer = () => {
+    if (!selectedMap) return;
+    setConnectionError(undefined);
+    setIsCreatingRoom(true);
+    setPendingMode("singleplayer");
+    createRoom(generateRoomCode(), {
+      mapId: selectedMap,
+      allowMove: moveEnabled,
+      allowPan: panEnabled,
+      allowZoom: zoomEnabled,
+      roundCount,
+      roundTimeLimitSeconds,
+      gameMode: "SINGLEPLAYER",
+    });
 
     clearCreateTimeout();
     createTimeoutRef.current = setTimeout(() => {
@@ -67,9 +96,13 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   useEffect(() => {
     if (createdRoomId) {
       clearCreateTimeout();
-      router.push(`/game/play/mp?roomId=${createdRoomId}`);
+      if (pendingMode === "singleplayer") {
+        router.push(`/game/play/sp?sessionId=${createdRoomId}`);
+      } else {
+        router.push(`/game/play/mp?roomId=${createdRoomId}`);
+      }
     }
-  }, [createdRoomId, router]);
+  }, [createdRoomId, pendingMode, router]);
 
   useEffect(() => {
     if (roomError) {
@@ -140,6 +173,11 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
             setZoomEnabled,
             roundCount,
             setRoundCount,
+            roundTimeLimitSeconds,
+            setRoundTimeLimitSeconds,
+            onStart: handleStartSingleplayer,
+            isStarting: isCreatingRoom,
+            startError: connectionError,
           }}
         />
       ) : (
@@ -165,6 +203,8 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
             roomError: roomError ?? connectionError,
             roundCount,
             setRoundCount,
+            roundTimeLimitSeconds,
+            setRoundTimeLimitSeconds,
           }}
         />
       )}

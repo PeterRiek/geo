@@ -3,66 +3,70 @@
 import { Coords } from "@/types/geo";
 import { Fade, useMediaQuery, useTheme } from "@mui/material";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
 import RoundResultView from "@/components/game/singleplayer/views/round-result-view";
-import PregameView from "@/components/game/singleplayer/views/pregame-view";
 import InGameView from "@/components/game/singleplayer/views/ingame-view";
 import PostgameView from "@/components/game/singleplayer/views/postgame-view";
 import GameFallback from "@/components/game/game-fallback";
-
-export type GamePhase = "PREGAME" | "INGAME" | "ROUND_RESULT" | "POSTGAME";
+import ConnectionBanner from "@/components/game/connection-banner";
+import useGameSocket from "@/lib/hooks/use-game-socket";
+import useCountdown from "@/lib/hooks/use-countdown";
 
 const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
   username,
 }) => {
   const searchParams = useSearchParams();
-  const playSet = useMemo(
-    () => ({
-      mapId: searchParams.get("mapId") || "world",
-      allowMove: searchParams.get("allowMove") === "true",
-      allowZoom: searchParams.get("allowZoom") === "true",
-      allowPan: searchParams.get("allowPan") === "true",
-      roundCount: Number.parseInt(searchParams.get("rounds") ?? "5") ?? 5,
-    }),
-    [searchParams]
-  );
+  const sessionId = searchParams.get("sessionId") ?? undefined;
+
+  const { gameState, connectionStatus, join, submitGuess, nextRound, reconnect, roomError } =
+    useGameSocket(sessionId, accessToken);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const phaseContainerRef = useRef<HTMLDivElement>(null);
 
-  const [gamePhase, setGamePhase] = useState<GamePhase>("PREGAME");
-  const [gameRoundCount, setGameRoundCount] = useState(0);
-  const [targetLocation, setTargetLocation] = useState<Coords>();
   const [guessLocation, setGuessLocation] = useState<Coords>();
-  const [roundFinished, setRoundFinished] = useState(true);
-  const [locationLoadError, setLocationLoadError] = useState(false);
-  const [allGuesses, setAllGuesses] = useState<
-    { [username: string]: Coords }[]
-  >([]);
-  const [allTargets, setAllTargets] = useState<Coords[]>([]);
+  const [roundFinished, setRoundFinished] = useState(false);
+  const [prevGamePhase, setPrevGamePhase] = useState("");
 
-  useEffect(() => {
-    const startGameSession = async () => {
-      try {
-        await fetch("/api/gamesession", {
-          method: "POST",
-        });
-      } catch (err) {
-        console.error("Failed to start gamesession.", err);
-      }
-    };
-    startGameSession();
-  }, [accessToken, playSet]);
+  const secondsLeft = useCountdown(gameState?.roundEndsAt);
 
   useEffect(() => {
     phaseContainerRef.current?.focus();
-  }, [gamePhase]);
+  }, [gameState?.roomPhase, gameState?.roundCount]);
+
+  const initRound = () => {
+    if (!gameState) return;
+    const guess = gameState.allGuesses[gameState.roundCount]?.[username];
+    if (!guess) return;
+    setGuessLocation(guess);
+    setRoundFinished(true);
+  };
 
   useEffect(() => {
-    const isActiveGame = gamePhase === "INGAME" || gamePhase === "ROUND_RESULT";
+    if (!gameState || !gameState.roomPhase) return;
+    if (prevGamePhase === "" && gameState.roomPhase === "ROUND_IN_PROGRESS") {
+      initRound();
+    }
+    if (
+      prevGamePhase === "ROUND_RESULTS" &&
+      gameState.roomPhase === "ROUND_IN_PROGRESS"
+    ) {
+      setGuessLocation(undefined);
+      setRoundFinished(false);
+    }
+    setPrevGamePhase(gameState.roomPhase);
+    // This effect only reacts to roomPhase transitions; gameState updates on
+    // every socket tick and initRound/prevGamePhase are read from the closure
+    // at transition time, so including them would refire on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState?.roomPhase]);
+
+  useEffect(() => {
+    const isActiveGame =
+      gameState?.roomPhase === "ROUND_IN_PROGRESS" || gameState?.roomPhase === "ROUND_RESULTS";
     if (!isActiveGame) return;
 
     const handler = (e: BeforeUnloadEvent) => {
@@ -71,139 +75,107 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [gamePhase]);
-
-  const fetchNextLocation = async () => {
-    try {
-      setLocationLoadError(false);
-      const res = await fetch(`/api/gamemap/${playSet.mapId}/locations/random`);
-      if (!res.ok) throw new Error("Failed to fetch target location");
-      const data = await res.json();
-      setTargetLocation(data);
-    } catch (err) {
-      console.error("Error fetching location:", err);
-      setLocationLoadError(true);
-    }
-  };
-
-  const gameNextPhase = () => {
-    switch (gamePhase) {
-      case "PREGAME":
-        setRoundFinished(false);
-        setGameRoundCount((i) => i + 1);
-        fetchNextLocation();
-        setGamePhase("INGAME");
-        break;
-      case "INGAME":
-        setRoundFinished(true);
-        setGamePhase("ROUND_RESULT");
-        break;
-      case "ROUND_RESULT":
-        if (guessLocation)
-          setAllGuesses([...allGuesses, { [username]: guessLocation }]);
-        if (targetLocation) setAllTargets([...allTargets, targetLocation]);
-
-        if (gameRoundCount >= playSet.roundCount) {
-          setGamePhase("POSTGAME");
-        } else {
-          setGuessLocation(undefined);
-          setTargetLocation(undefined);
-          setRoundFinished(false);
-          setGameRoundCount((i) => i + 1);
-          fetchNextLocation();
-          setGamePhase("INGAME");
-        }
-        break;
-    }
-  };
+  }, [gameState?.roomPhase]);
 
   const onMapClick = (pos: Coords) => {
+    if (roundFinished) return;
     setGuessLocation(pos);
   };
 
   const onGuess = () => {
-    gameNextPhase();
+    if (!guessLocation) return;
+    submitGuess(guessLocation);
+    setRoundFinished(true);
   };
 
   let content: React.ReactNode;
-  let phaseKey = gamePhase;
+  let phaseKey: string;
 
-  if (gamePhase === "PREGAME") {
-    content = <PregameView playSet={playSet} onStart={gameNextPhase} />;
-  } else if (!targetLocation) {
-    phaseKey = `${gamePhase}-loading` as GamePhase;
-    if (locationLoadError) {
+  if (!gameState) {
+    phaseKey = roomError ? "error" : "loading";
+    content = roomError ? (
+      <GameFallback
+        variant="error"
+        title="Couldn't load this game"
+        description={roomError}
+        onRetry={() => sessionId && join()}
+      />
+    ) : (
+      <GameFallback variant="loading" title="Loading round..." />
+    );
+  } else {
+    const gameSettings = gameState.roomSettings;
+
+    if (gameState.roomPhase === "GAME_RESULTS") {
+      phaseKey = "postgame";
       content = (
-        <GameFallback
-          variant="error"
-          title="Couldn't load a location"
-          description="Something went wrong fetching the next round. Please try again."
-          onRetry={fetchNextLocation}
+        <PostgameView
+          username={username}
+          allGuesses={gameState.allGuesses}
+          allTargets={gameState.allTargets}
+        />
+      );
+    } else if (
+      gameState.roomPhase === "ROUND_IN_PROGRESS" &&
+      gameState.allTargets[gameState.roundCount]
+    ) {
+      phaseKey = `ingame-${gameState.roundCount}`;
+      content = (
+        <InGameView
+          isMobile={isMobile}
+          targetLocation={gameState.allTargets[gameState.roundCount]}
+          guessLocation={guessLocation}
+          roundFinished={roundFinished}
+          onMapClick={onMapClick}
+          onGuess={onGuess}
+          moveEnabled={gameSettings.allowMove}
+          panEnabled={gameSettings.allowPan}
+          zoomEnabled={gameSettings.allowZoom}
+          round={gameState.roundCount + 1}
+          totalRounds={gameSettings.roundCount}
+          secondsLeft={secondsLeft}
+        />
+      );
+    } else if (gameState.roomPhase === "ROUND_RESULTS") {
+      phaseKey = `result-${gameState.roundCount}`;
+      const userGuess = gameState.allGuesses[gameState.roundCount]?.[username];
+      const target = gameState.allTargets[gameState.roundCount];
+      const distance = userGuess ? getDistanceInKm(userGuess, target) : -1;
+      const score = userGuess ? getGuessrScore(distance, 10_000) : 0;
+      const center = userGuess ? getCenterCoords(userGuess, target) : { lat: 0, lng: 0 };
+      const zoom = 1 + (score / 5000) * 8;
+
+      content = (
+        <RoundResultView
+          score={score}
+          distance={distance}
+          guessLocation={userGuess}
+          targetLocation={target}
+          center={center}
+          zoom={zoom}
+          onNext={() => nextRound()}
+          isFinalRound={gameState.roundCount >= gameSettings.roundCount}
         />
       );
     } else {
+      phaseKey = "loading";
       content = <GameFallback variant="loading" title="Loading round..." />;
     }
-  } else if (gamePhase === "INGAME") {
-    content = (
-      <InGameView
-        isMobile={isMobile}
-        targetLocation={targetLocation}
-        guessLocation={guessLocation}
-        roundFinished={roundFinished}
-        onMapClick={onMapClick}
-        onGuess={onGuess}
-        moveEnabled={playSet.allowMove}
-        panEnabled={playSet.allowPan}
-        zoomEnabled={playSet.allowZoom}
-        round={gameRoundCount}
-        totalRounds={playSet.roundCount}
-      />
-    );
-  } else if (!guessLocation) {
-    content = (
-      <GameFallback variant="error" title="No guess was recorded for this round." />
-    );
-  } else if (gamePhase === "ROUND_RESULT") {
-    const distance = getDistanceInKm(guessLocation, targetLocation);
-    const score = getGuessrScore(distance, 10_000);
-    const center = getCenterCoords(guessLocation, targetLocation);
-    const zoom = 1 + (score / 5000) * 8;
-
-    content = (
-      <RoundResultView
-        score={score}
-        distance={distance}
-        guessLocation={guessLocation}
-        targetLocation={targetLocation}
-        center={center}
-        zoom={zoom}
-        onNext={gameNextPhase}
-        isFinalRound={gameRoundCount >= playSet.roundCount}
-      />
-    );
-  } else if (gamePhase === "POSTGAME") {
-    content = (
-      <PostgameView
-        allGuesses={allGuesses}
-        allTargets={allTargets}
-        username={username}
-      />
-    );
-  } else {
-    content = <GameFallback variant="error" title="Unknown game state." />;
   }
 
   return (
-    <Fade in key={phaseKey} timeout={300}>
-      <div
-        ref={phaseContainerRef}
-        tabIndex={-1}
-        style={{ height: "100%", outline: "none" }}
-      >
-        {content}
-      </div>
-    </Fade>
+    <>
+      <ConnectionBanner status={connectionStatus} onReconnect={reconnect} />
+      <Fade in key={phaseKey} timeout={300}>
+        <div
+          ref={phaseContainerRef}
+          tabIndex={-1}
+          style={{ height: "100%", outline: "none" }}
+        >
+          {content}
+        </div>
+      </Fade>
+    </>
   );
 };
 

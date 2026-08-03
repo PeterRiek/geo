@@ -1,17 +1,24 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
-export async function POST() {
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
   const session = await auth();
 
   try {
-    const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gamesession`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-    });
+    const backendRes = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/gamesession/${id}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     const data = await backendRes.json();
 

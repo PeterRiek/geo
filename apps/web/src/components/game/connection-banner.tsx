@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Box, Button } from "@mui/material";
-import { ConnectionStatus } from "@/lib/hooks/use-multiplayer-socket";
+import { ConnectionStatus } from "@/lib/hooks/use-game-socket";
 
 interface Props {
   status: ConnectionStatus;
