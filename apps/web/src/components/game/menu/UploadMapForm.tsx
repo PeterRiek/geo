@@ -7,23 +7,35 @@ import {
   Box,
   Button,
   Container,
+  FormControlLabel,
   Paper,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+
+const DEFAULT_MAX_ERROR_DISTANCE_KM = 10_000;
 
 const UploadMapForm: React.FC = () => {
   const router = useRouter();
   const [name, setName] = useState("");
   const [coordinatesFile, setCoordinatesFile] = useState<File>();
   const [imageFile, setImageFile] = useState<File>();
+  const [isPublic, setIsPublic] = useState(false);
+  const [maxErrorDistanceKm, setMaxErrorDistanceKm] = useState(DEFAULT_MAX_ERROR_DISTANCE_KM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState(false);
 
-  const canSubmit = name.trim() && coordinatesFile && imageFile && !submitting;
+  const canSubmit =
+    name.trim() &&
+    coordinatesFile &&
+    imageFile &&
+    maxErrorDistanceKm > 0 &&
+    maxErrorDistanceKm <= 20_000 &&
+    !submitting;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +50,8 @@ const UploadMapForm: React.FC = () => {
       formData.append("name", name.trim());
       formData.append("coordinates", coordinatesFile);
       formData.append("image", imageFile);
+      formData.append("isPublic", String(isPublic));
+      formData.append("maxErrorDistanceKm", String(maxErrorDistanceKm));
 
       const res = await fetch("/api/gamemap", { method: "POST", body: formData });
       const data = await res.json().catch(() => undefined);
@@ -51,6 +65,8 @@ const UploadMapForm: React.FC = () => {
       setName("");
       setCoordinatesFile(undefined);
       setImageFile(undefined);
+      setIsPublic(false);
+      setMaxErrorDistanceKm(DEFAULT_MAX_ERROR_DISTANCE_KM);
     } catch {
       setError("Failed to upload map. Check your connection and try again.");
     } finally {
@@ -76,6 +92,22 @@ const UploadMapForm: React.FC = () => {
             onChange={(e) => setName(e.target.value)}
             fullWidth
             required
+          />
+
+          <TextField
+            label="Boundary scale (max error distance, km)"
+            type="number"
+            value={maxErrorDistanceKm}
+            onChange={(e) => setMaxErrorDistanceKm(Number(e.target.value))}
+            helperText="How far a wrong guess can be before it scores 0 — smaller for tightly-bounded maps, larger for world maps."
+            slotProps={{ htmlInput: { min: 1, max: 20_000 } }}
+            fullWidth
+            required
+          />
+
+          <FormControlLabel
+            control={<Switch checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />}
+            label={isPublic ? "Public — anyone can play this map" : "Private — only you can play this map"}
           />
 
           <Button

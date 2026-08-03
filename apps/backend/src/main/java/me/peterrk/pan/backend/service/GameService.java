@@ -20,6 +20,8 @@ import me.peterrk.pan.backend.dto.GameSettings;
 import me.peterrk.pan.backend.dto.ws.LatLng;
 import me.peterrk.pan.backend.dto.ws.RoomState;
 import me.peterrk.pan.backend.dto.ws.ServerMessage;
+import me.peterrk.pan.backend.exception.MapAccessException;
+import me.peterrk.pan.backend.model.GameMap;
 import me.peterrk.pan.backend.util.GeoUtils;
 
 @Service
@@ -64,6 +66,15 @@ public class GameService {
       gameSettings.roundTimeLimitSeconds = Math.max(MIN_ROUND_TIME_LIMIT_SECONDS,
           Math.min(MAX_ROUND_TIME_LIMIT_SECONDS, gameSettings.roundTimeLimitSeconds));
     }
+
+    GameMap map = gameMapService.getGameMap(gameSettings.mapId);
+    if (map == null || !gameMapService.canAccess(map, creatorUsername)) {
+      throw new MapAccessException("Map " + gameSettings.mapId + " is not accessible to " + creatorUsername);
+    }
+    // Never trust a client-supplied value here — always take the chosen map's own scoring range.
+    gameSettings.maxErrorDistanceKm = map.getMaxErrorDistanceKm() != null
+        ? map.getMaxErrorDistanceKm()
+        : GeoUtils.DEFAULT_MAX_ERROR_DISTANCE_KM;
 
     return rooms.computeIfAbsent(roomId, id -> {
       RoomState room = new RoomState();
@@ -185,6 +196,9 @@ public class GameService {
     Map<String, LatLng> guesses = currentRoundGuesses(room);
     Map<String, Double> distances = currentRoundDistances(room);
     Map<String, Integer> scores = currentRoundScores(room);
+    double maxErrorDistanceKm = room.roomSettings.maxErrorDistanceKm != null
+        ? room.roomSettings.maxErrorDistanceKm
+        : GeoUtils.DEFAULT_MAX_ERROR_DISTANCE_KM;
     for (String player : room.players) {
       LatLng guess = guesses.get(player);
       if (guess == null) {
@@ -194,7 +208,7 @@ public class GameService {
       }
       double distanceKm = GeoUtils.distanceKm(target, guess);
       distances.put(player, distanceKm);
-      scores.put(player, GeoUtils.score(distanceKm));
+      scores.put(player, GeoUtils.score(distanceKm, maxErrorDistanceKm));
     }
   }
 

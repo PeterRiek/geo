@@ -16,16 +16,14 @@ import {
   Tooltip,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import MapSelect from "./MapSelect";
+import SelectedMapSummary from "./SelectedMapSummary";
 import NMPZSelect from "./NMPZSelect";
 
 // eslint-disable-next-line
 const MultiplayerSettings: React.FC<any> = ({
   maps,
   selectedMap,
-  setSelectedMap,
   mapsLoading,
-  scrollPositionRef,
   moveEnabled,
   panEnabled,
   zoomEnabled,
@@ -110,7 +108,6 @@ const MultiplayerSettings: React.FC<any> = ({
         width: "100%",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
         gap: 1,
         pt: 1,
         pb: 3,
@@ -138,14 +135,8 @@ const MultiplayerSettings: React.FC<any> = ({
         </>
       ) : (
         <>
-          <Paper sx={{ p: 1, flex: 1, minHeight: 0, display: "flex" }}>
-            <MapSelect
-              maps={maps}
-              selectedMap={selectedMap}
-              setSelectedMap={setSelectedMap}
-              mapsLoading={mapsLoading}
-              scrollPositionRef={scrollPositionRef}
-            />
+          <Paper sx={{ p: 1 }}>
+            <SelectedMapSummary maps={maps} selectedMap={selectedMap} mapsLoading={mapsLoading} />
           </Paper>
           <Paper sx={{ p: 1 }}>
             <NMPZSelect

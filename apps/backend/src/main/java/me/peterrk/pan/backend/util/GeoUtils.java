@@ -2,11 +2,12 @@ package me.peterrk.pan.backend.util;
 
 import me.peterrk.pan.backend.dto.ws.LatLng;
 
-/** Mirrors apps/web/src/lib/geo.ts — kept in sync so persisted results match what players saw. */
+/** Haversine distance + GeoGuessr-style exponential-decay scoring, shared by every game mode. */
 public final class GeoUtils {
 
   private static final double EARTH_RADIUS_KM = 6371;
-  private static final double MAX_DISTANCE_KM = 10_000;
+  // Fallback for maps with no configured maxErrorDistanceKm (legacy rows predating that field).
+  public static final double DEFAULT_MAX_ERROR_DISTANCE_KM = 10_000;
 
   private GeoUtils() {
   }
@@ -24,7 +25,7 @@ public final class GeoUtils {
     return EARTH_RADIUS_KM * c;
   }
 
-  public static int score(double distanceKm) {
-    return (int) Math.round(5000 * Math.exp(-10 * (distanceKm / MAX_DISTANCE_KM)));
+  public static int score(double distanceKm, double maxErrorDistanceKm) {
+    return (int) Math.round(5000 * Math.exp(-10 * (distanceKm / maxErrorDistanceKm)));
   }
 }

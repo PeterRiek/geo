@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Divider } from "@mui/material";
 import useGameSocket from "@/lib/hooks/use-game-socket";
 import { generateRoomCode } from "@/lib/room-code";
@@ -26,6 +26,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [maps, setMaps] = useState<{ id: number; name: string; imageUrl?: string }[]>([]);
   const [mapsLoading, setMapsLoading] = useState(true);
   const [selectedMap, setSelectedMap] = useState<number>();
@@ -42,7 +43,6 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [connectionError, setConnectionError] = useState<string>();
   const [pendingMode, setPendingMode] = useState<"singleplayer" | "multiplayer">();
-  const scrollPositionRef = useRef<number>(0);
   const createTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const { createRoom, createdRoomId, roomError, connectionStatus } =
@@ -145,6 +145,15 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
     loadMaps();
   }, []);
 
+  useEffect(() => {
+    const mapIdParam = searchParams.get("mapId");
+    if (!mapIdParam) return;
+    const mapId = Number(mapIdParam);
+    if (Number.isFinite(mapId)) {
+      setSelectedMap(mapId);
+    }
+  }, [searchParams]);
+
   return (
     <Box
       sx={{
@@ -166,7 +175,6 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
             selectedMap,
             setSelectedMap,
             mapsLoading,
-            scrollPositionRef,
             moveEnabled,
             panEnabled,
             zoomEnabled,
@@ -179,7 +187,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
             setRoundTimeLimitSeconds,
             onStart: handleStartSingleplayer,
             isStarting: isCreatingRoom,
-            startError: connectionError,
+            startError: roomError ?? connectionError,
           }}
         />
       ) : (
@@ -189,7 +197,6 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
             selectedMap,
             setSelectedMap,
             mapsLoading,
-            scrollPositionRef,
             moveEnabled,
             panEnabled,
             zoomEnabled,

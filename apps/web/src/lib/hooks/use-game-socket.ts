@@ -113,6 +113,9 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
         case "ROOM_NOT_FOUND":
           setRoomError("Room not found.");
           break;
+        case "MAP_NOT_ACCESSIBLE":
+          setRoomError("That map isn't available to you anymore. Pick another one.");
+          break;
       }
     };
 
