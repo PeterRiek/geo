@@ -22,6 +22,8 @@ interface GameState {
   roomSettings: GameSettings;
   allTargets: Coords[];
   allGuesses: { [username: string]: Coords }[];
+  allDistances: { [username: string]: number | null }[];
+  allScores: { [username: string]: number }[];
   players: string[];
   roundEndsAt?: number;
   disconnectedPlayers?: string[];

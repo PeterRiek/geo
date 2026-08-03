@@ -24,7 +24,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import InGameView from "../singleplayer/views/ingame-view";
 import RoundResultView from "../singleplayer/views/round-result-view";
-import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
+import { getCenterCoords } from "@/lib/geo";
 import { useSearchParams } from "next/navigation";
 import PostgameView from "../singleplayer/views/postgame-view";
 import GameFallback from "@/components/game/game-fallback";
@@ -258,6 +258,8 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
           players={gameState.players}
           allGuesses={gameState.allGuesses}
           allTargets={gameState.allTargets}
+          allScores={gameState.allScores}
+          allDistances={gameState.allDistances}
         />
       );
     } else if (gameState.roomPhase == "WAITING") {
@@ -408,26 +410,18 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         .map(([_, guess]) => guess);
 
-      const distance = userGuess
-        ? getDistanceInKm(userGuess, gameState.allTargets[gameState.roundCount])
-        : -1;
-      const score = userGuess ? getGuessrScore(distance, 10_000) : 0;
+      const distance = gameState.allDistances[gameState.roundCount]?.[username] ?? -1;
+      const score = gameState.allScores[gameState.roundCount]?.[username] ?? 0;
       const center = userGuess
         ? getCenterCoords(userGuess, gameState.allTargets[gameState.roundCount])
         : { lat: 0, lng: 0 };
       const zoom = 1 + (score / 5000) * 8;
 
       const roundStandings = (gameState.players ?? [])
-        .map((player) => {
-          const guess = gameState.allGuesses[gameState.roundCount][player];
-          const playerScore = guess
-            ? getGuessrScore(
-                getDistanceInKm(guess, gameState.allTargets[gameState.roundCount]),
-                10_000
-              )
-            : 0;
-          return { player, score: playerScore };
-        })
+        .map((player) => ({
+          player,
+          score: gameState.allScores[gameState.roundCount]?.[player] ?? 0,
+        }))
         .sort((a, b) => b.score - a.score);
 
       content = (
