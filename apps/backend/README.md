@@ -29,11 +29,16 @@ repository/   Spring Data repositories
 dto/          Request/response shapes; dto/ws/ is the WebSocket wire protocol
 config/       Security, static resource serving, WebSocket registration
 util/         JWT signing/parsing, geo distance/scoring math
+exception/    Global error mapping (GlobalExceptionHandler)
 ```
+
+## Errors
+
+`exception/GlobalExceptionHandler.java` (`@RestControllerAdvice`) is the single place HTTP error responses are shaped, so every endpoint fails the same way: `{"error": "..."}` with an appropriate status (400 for validation, 401/403 for auth, 404 for not-found, 413 for oversized uploads, 500 for anything unexpected — the last one logged server-side). Controllers generally shouldn't catch exceptions themselves; let validation/lookup failures propagate and add a handler here instead.
 
 ## Auth
 
-Username/password login issues a JWT (`AuthController`, `JwtUtil`); `JwtAuthFilter` validates it on every HTTP request and `JwtHandshakeInterceptor` validates it on the WebSocket handshake (token passed as a `?token=` query param, since browsers can't set headers on a WebSocket upgrade). Sessions are stateless — no server-side session store, `SecurityConfig` sets `SessionCreationPolicy.STATELESS`.
+Username/password login issues a JWT (`AuthController`, `JwtUtil`); `JwtAuthFilter` validates it on every HTTP request and `JwtHandshakeInterceptor` validates it on the WebSocket handshake (token passed as a `?token=` query param, since browsers can't set headers on a WebSocket upgrade). Sessions are stateless — no server-side session store, `SecurityConfig` sets `SessionCreationPolicy.STATELESS`. Token lifetime is `jwt.expiration-ms` (`JWT_EXPIRATION_MS` env var, default 24h).
 
 Authorization beyond "logged in" is role/permission based (`Role`, `Permission`, `MethodSecurityConfig`), checked with `@PreAuthorize` — e.g. `MANAGE_MAPS` gates map upload, `READ_USER` gates the user list.
 
@@ -80,7 +85,7 @@ The `uploads/` directory (`coordinates/` + `images/` subfolders) is a Docker vol
 | `POST /api/auth/login`, `/register` | Public |
 | `DELETE /api/auth/delete` | Deletes the authenticated user |
 | `GET /api/user/me` | Current user profile |
-| `GET /api/user/can-play` | Daily play-limit check, used by the frontend's `/game/play` middleware gate |
+| `GET /api/user/can-play` | Daily play-limit check, used by the frontend's `/game/play` middleware gate. Cap is `app.game.daily-limit` (`DAILY_GAME_LIMIT` env var, default 5) and counts singleplayer and multiplayer sessions together, per participant — not just whoever created a duel room |
 | `GET /api/user/list` | Requires `READ_USER` |
 | `GET /api/gamemap`, `/{id}`, `/{id}/locations`, `/{id}/locations/random` | Map metadata + coordinate lookup |
 | `POST /api/gamemap` | Upload a map, requires `MANAGE_MAPS` |

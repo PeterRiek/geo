@@ -8,6 +8,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -21,6 +23,8 @@ import me.peterrk.pan.backend.dto.ws.ServerMessage;
 
 @Service
 public class GameService {
+
+  private static final Logger log = LoggerFactory.getLogger(GameService.class);
 
   private static final int MIN_ROUND_TIME_LIMIT_SECONDS = 15;
   private static final int MAX_ROUND_TIME_LIMIT_SECONDS = 300;
@@ -180,7 +184,7 @@ public class GameService {
     try {
       gameHistoryService.persistCompletedSession(room);
     } catch (Exception e) {
-      System.err.println("Failed to persist completed session " + room.roomId + ": " + e.getMessage());
+      log.error("Failed to persist completed session {}", room.roomId, e);
     }
     closeRoom(room.roomId);
   }
@@ -274,7 +278,7 @@ public class GameService {
             session.close();
           }
         } catch (Exception e) {
-          System.err.println("Error closing session: " + e.getMessage());
+          log.warn("Error closing session for room {}", roomId, e);
         }
       }
     }

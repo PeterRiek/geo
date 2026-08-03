@@ -2,7 +2,6 @@ package me.peterrk.pan.backend.controller;
 
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,8 +15,11 @@ import me.peterrk.pan.backend.service.GameService;
 @RequestMapping("/api/game")
 public class GameController {
 
-  @Autowired
-  private GameService gameService;
+  private final GameService gameService;
+
+  public GameController(GameService gameService) {
+    this.gameService = gameService;
+  }
 
   /** The in-progress room (if any) the caller is currently a member of — powers the reconnect banner. */
   @GetMapping("/active")

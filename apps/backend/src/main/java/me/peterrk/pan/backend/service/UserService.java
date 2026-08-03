@@ -1,9 +1,9 @@
 package me.peterrk.pan.backend.service;
 
 import me.peterrk.pan.backend.model.User;
-import me.peterrk.pan.backend.repository.GameSessionRepository;
+import me.peterrk.pan.backend.repository.GameSessionPlayerRepository;
 import me.peterrk.pan.backend.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -16,11 +16,16 @@ import java.util.Map;
 @Service
 public class UserService {
 
-  @Autowired
-  private UserRepository userRepository;
+  private final UserRepository userRepository;
+  private final GameSessionPlayerRepository gameSessionPlayerRepository;
 
-  @Autowired
-  private GameSessionRepository gameSessionRepository;
+  @Value("${app.game.daily-limit:5}")
+  private int dailyLimit;
+
+  public UserService(UserRepository userRepository, GameSessionPlayerRepository gameSessionPlayerRepository) {
+    this.userRepository = userRepository;
+    this.gameSessionPlayerRepository = gameSessionPlayerRepository;
+  }
 
   public User getAuthenticatedUser(String username) {
     return userRepository.findByUsername(username)
@@ -37,11 +42,11 @@ public class UserService {
     LocalDate today = LocalDate.now();
     LocalDateTime startOfDay = today.atStartOfDay();
     LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
-    int playedToday = gameSessionRepository.countTodayByUser(user, startOfDay, startOfNextDay);
+    int playedToday = gameSessionPlayerRepository.countTodayByUser(user, startOfDay, startOfNextDay);
 
     boolean hasUnlimitedPlay = hasPermission(user, "PLAY_UNLIMITED");
 
-    int maxGamesPerDay = hasUnlimitedPlay ? -1 : 5;
+    int maxGamesPerDay = hasUnlimitedPlay ? -1 : dailyLimit;
     boolean canPlay = hasUnlimitedPlay || playedToday < maxGamesPerDay;
 
     Map<String, Object> response = new HashMap<>();
