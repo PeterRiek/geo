@@ -28,6 +28,8 @@ services:
       JDBC_DATABASE_USERNAME: ${POSTGRES_USER:-postgres}
       JDBC_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+    volumes:
+      - backend-uploads:/app/uploads
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     healthcheck:
@@ -56,3 +58,4 @@ services:
 
 volumes:
   postgres-data:
+  backend-uploads:

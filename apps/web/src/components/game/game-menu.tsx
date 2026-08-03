@@ -25,7 +25,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
 }) => {
   const router = useRouter();
-  const [maps, setMaps] = useState<{ id: number; name: string }[]>([]);
+  const [maps, setMaps] = useState<{ id: number; name: string; imageUrl?: string }[]>([]);
   const [mapsLoading, setMapsLoading] = useState(true);
   const [selectedMap, setSelectedMap] = useState<number>();
   const [roomId, setRoomId] = useState("");
@@ -138,7 +138,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
       const resp = await fetch("/api/gamemap");
       const data = await resp.json();
       // eslint-disable-next-line
-      setMaps(data.map((m: any) => ({ id: m.id, name: m.name })));
+      setMaps(data.map((m: any) => ({ id: m.id, name: m.name, imageUrl: m.imageUrl })));
       setMapsLoading(false);
     };
     loadMaps();

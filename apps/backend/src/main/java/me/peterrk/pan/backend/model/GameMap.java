@@ -18,8 +18,14 @@ public class GameMap {
   @Column(unique = true, nullable = false)
   private String name;
 
+  // For maps uploaded via /api/gamemap, this is a path relative to the uploads
+  // dir (read directly off disk). For older/external maps it's a full URL,
+  // fetched over HTTP — see GameMapService#getCustomCoordinates.
   @Column(name = "json_file_url", unique = true, nullable = false)
   private String jsonFileUrl;
+
+  @Column(name = "image_url")
+  private String imageUrl;
 
   public GameMap() {
   }
@@ -27,6 +33,12 @@ public class GameMap {
   public GameMap(String name, String jsonFileUrl) {
     this.name = name;
     this.jsonFileUrl = jsonFileUrl;
+  }
+
+  public GameMap(String name, String jsonFileUrl, String imageUrl) {
+    this.name = name;
+    this.jsonFileUrl = jsonFileUrl;
+    this.imageUrl = imageUrl;
   }
 
   public Long getId() {
@@ -51,5 +63,13 @@ public class GameMap {
 
   public void setJsonFileUrl(String jsonFileUrl) {
     this.jsonFileUrl = jsonFileUrl;
+  }
+
+  public String getImageUrl() {
+    return imageUrl;
+  }
+
+  public void setImageUrl(String imageUrl) {
+    this.imageUrl = imageUrl;
   }
 }

@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef } from "react";
 import { Box, ToggleButton, Typography } from "@mui/material";
+import { getPublicBackendOrigin } from "@/lib/backend-url";
 
-type Map = { id: number; name: string };
+type Map = { id: number; name: string; imageUrl?: string };
 
 // TODO: backend doesn't provide map thumbnails/descriptions yet — mock until it does.
 // picsum.photos seeds aren't content-filterable, so use loremflickr's tag
@@ -87,7 +88,11 @@ const MapList: React.FC<{
         >
           <Box
             component="img"
-            src={mockImageUrl(map.id)}
+            src={
+              map.imageUrl
+                ? `${getPublicBackendOrigin()}${map.imageUrl}`
+                : mockImageUrl(map.id)
+            }
             alt=""
             sx={{
               width: 96,

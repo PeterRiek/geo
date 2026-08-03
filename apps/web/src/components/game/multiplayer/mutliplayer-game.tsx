@@ -46,7 +46,9 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const { gameState, connectionStatus, join, startGame, nextRound, submitGuess, reconnect } =
     useGameSocket(roomId ?? "default", accessToken);
 
-  const secondsLeft = useCountdown(gameState?.roundEndsAt);
+  const secondsLeft = useCountdown(
+    gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined
+  );
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -124,6 +126,17 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
     submitGuess(guessLocation);
     setRoundFinished(true);
   };
+
+  useEffect(() => {
+    // Timer hit 0: auto-submit whatever pin is already placed rather than
+    // losing it to the server's timeout resolution.
+    if (secondsLeft === 0 && !roundFinished) {
+      onGuess();
+    }
+    // Intentionally only reacting to the countdown reaching 0 — onGuess/guessLocation
+    // are read from the latest closure at that moment, not on every change of theirs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft]);
 
   const start = () => {
     startGame();
@@ -388,7 +401,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
           center={center}
           zoom={zoom}
           onNext={next}
-          isFinalRound={gameState.roundCount >= gameSettings.roundCount}
+          isFinalRound={gameState.roundCount >= gameSettings.roundCount - 1}
         />
       );
     } else {

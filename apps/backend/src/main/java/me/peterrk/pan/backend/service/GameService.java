@@ -155,26 +155,31 @@ public class GameService {
     currentRoundGuesses(room).putIfAbsent(username, guess);
   }
 
-  /** Must be called while holding `synchronized (room)`. */
+  /**
+   * Must be called while holding `synchronized (room)`. Always lands on ROUND_RESULTS, even for
+   * the last round — players should see that round's result before the game summary, not skip
+   * straight to it. The game only actually ends when they click through via nextRound().
+   */
   private void advanceIfComplete(RoomState room) {
     Map<String, LatLng> currentGuesses = currentRoundGuesses(room);
     if (currentGuesses.size() < room.players.size()) {
       broadcast(room.roomId, new ServerMessage("GUESS_SUBMITTED", room));
       return;
     }
-    if (room.roundCount >= room.roomSettings.roundCount - 1) {
-      room.roomPhase = RoomState.RoomPhase.GAME_RESULTS;
-      broadcast(room.roomId, new ServerMessage("GAME_RESULTS", room));
-      try {
-        gameHistoryService.persistCompletedSession(room);
-      } catch (Exception e) {
-        System.err.println("Failed to persist completed session " + room.roomId + ": " + e.getMessage());
-      }
-      closeRoom(room.roomId);
-    } else {
-      room.roomPhase = RoomState.RoomPhase.ROUND_RESULTS;
-      broadcast(room.roomId, new ServerMessage("ROUND_RESULTS", room));
+    room.roomPhase = RoomState.RoomPhase.ROUND_RESULTS;
+    broadcast(room.roomId, new ServerMessage("ROUND_RESULTS", room));
+  }
+
+  /** Must be called while holding `synchronized (room)`. */
+  private void finishGame(RoomState room) {
+    room.roomPhase = RoomState.RoomPhase.GAME_RESULTS;
+    broadcast(room.roomId, new ServerMessage("GAME_RESULTS", room));
+    try {
+      gameHistoryService.persistCompletedSession(room);
+    } catch (Exception e) {
+      System.err.println("Failed to persist completed session " + room.roomId + ": " + e.getMessage());
     }
+    closeRoom(room.roomId);
   }
 
   public boolean startGame(String roomId) {
@@ -200,6 +205,10 @@ public class GameService {
     synchronized (room) {
       if (room.roomPhase != RoomState.RoomPhase.ROUND_RESULTS) {
         return false;
+      }
+      if (room.roundCount >= room.roomSettings.roundCount - 1) {
+        finishGame(room);
+        return true;
       }
       room.roundCount++;
       room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;

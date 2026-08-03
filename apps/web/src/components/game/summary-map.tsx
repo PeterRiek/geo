@@ -113,11 +113,13 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
     };
 
     initMap().catch(() => handleMapsError());
-    // otherGuesses is passed as a new array literal on every render by callers
-    // (e.g. postgame-view), so depending on it would recreate the map/markers
-    // on every render instead of only when the shown round changes.
+    // Depend on primitive lat/lng values, not the center/guessLocation/targetLocation
+    // objects themselves — callers (e.g. round-result-view) recompute those as new
+    // object literals on every render, which would otherwise tear down and rebuild
+    // the whole map on any unrelated parent re-render.
+    // otherGuesses is excluded for the same reason (new array literal every render).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, zoom, guessLocation, targetLocation]);
+  }, [center?.lat, center?.lng, zoom, guessLocation?.lat, guessLocation?.lng, targetLocation.lat, targetLocation.lng]);
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
 };

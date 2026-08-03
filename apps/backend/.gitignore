@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Uploaded content (user-generated, served from disk — see app.uploads.dir) ###
+/uploads/

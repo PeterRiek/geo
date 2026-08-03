@@ -59,7 +59,7 @@ const RoundResultView: React.FC<Props> = ({
     </Paper>
 
     <Button onClick={onNext} size="large" variant="contained">
-      {isFinalRound ? "End Game" : "Next Round"}
+      {isFinalRound ? "Go to Summary" : "Next Round"}
     </Button>
   </Box>
 );

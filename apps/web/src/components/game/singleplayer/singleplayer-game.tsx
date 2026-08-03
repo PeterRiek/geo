@@ -31,7 +31,9 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const [roundFinished, setRoundFinished] = useState(false);
   const [prevGamePhase, setPrevGamePhase] = useState("");
 
-  const secondsLeft = useCountdown(gameState?.roundEndsAt);
+  const secondsLeft = useCountdown(
+    gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined
+  );
 
   useEffect(() => {
     phaseContainerRef.current?.focus();
@@ -87,6 +89,17 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
     submitGuess(guessLocation);
     setRoundFinished(true);
   };
+
+  useEffect(() => {
+    // Timer hit 0: auto-submit whatever pin is already placed rather than
+    // losing it to the server's timeout resolution.
+    if (secondsLeft === 0 && !roundFinished) {
+      onGuess();
+    }
+    // Intentionally only reacting to the countdown reaching 0 — onGuess/guessLocation
+    // are read from the latest closure at that moment, not on every change of theirs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft]);
 
   let content: React.ReactNode;
   let phaseKey: string;
@@ -154,7 +167,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
           center={center}
           zoom={zoom}
           onNext={() => nextRound()}
-          isFinalRound={gameState.roundCount >= gameSettings.roundCount}
+          isFinalRound={gameState.roundCount >= gameSettings.roundCount - 1}
         />
       );
     } else {
@@ -165,7 +178,9 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
 
   return (
     <>
-      <ConnectionBanner status={connectionStatus} onReconnect={reconnect} />
+      {phaseKey !== "postgame" && (
+        <ConnectionBanner status={connectionStatus} onReconnect={reconnect} />
+      )}
       <Fade in key={phaseKey} timeout={300}>
         <div
           ref={phaseContainerRef}

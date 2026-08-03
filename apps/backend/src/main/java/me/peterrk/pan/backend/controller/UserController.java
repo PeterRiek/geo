@@ -33,7 +33,7 @@ public class UserController {
     }
 
     User user = userService.getAuthenticatedUser(username);
-    return ResponseEntity.ok(user);
+    return ResponseEntity.ok(new UserDto(user));
   }
 
   @GetMapping("/can-play")

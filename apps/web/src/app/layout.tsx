@@ -28,6 +28,22 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
 
+  let canManageMaps = false;
+  if (session?.accessToken) {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/me`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const me: { permissions?: string[] } = await res.json();
+        canManageMaps = me.permissions?.includes("MANAGE_MAPS") ?? false;
+      }
+    } catch {
+      canManageMaps = false;
+    }
+  }
+
   return (
     <html lang="en" className={roboto.variable} suppressHydrationWarning style={{height:"100%"}}>
       <body style={{height:"100%"}}>
@@ -36,7 +52,7 @@ export default async function RootLayout({
           <ThemeProvider theme={theme}>
             <CssBaseline />
 
-            <AppShell username={session?.user?.name ?? null}>
+            <AppShell username={session?.user?.name ?? null} canManageMaps={canManageMaps}>
               {children}
             </AppShell>
           </ThemeProvider>
