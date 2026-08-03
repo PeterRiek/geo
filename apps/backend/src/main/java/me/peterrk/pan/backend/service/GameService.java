@@ -51,11 +51,14 @@ public class GameService {
   }
 
   public RoomState createRoom(String roomId, GameSettings gameSettings, String creatorUsername) {
-    if (gameSettings.roundTimeLimitSeconds <= 0) {
-      gameSettings.roundTimeLimitSeconds = DEFAULT_ROUND_TIME_LIMIT_SECONDS;
+    // 0 is a deliberate "unlimited" signal (the time-limit slider's leftmost position), not
+    // "unset" — only clamp when a real, positive limit was requested.
+    if (gameSettings.roundTimeLimitSeconds < 0) {
+      gameSettings.roundTimeLimitSeconds = 0;
+    } else if (gameSettings.roundTimeLimitSeconds > 0) {
+      gameSettings.roundTimeLimitSeconds = Math.max(MIN_ROUND_TIME_LIMIT_SECONDS,
+          Math.min(MAX_ROUND_TIME_LIMIT_SECONDS, gameSettings.roundTimeLimitSeconds));
     }
-    gameSettings.roundTimeLimitSeconds = Math.max(MIN_ROUND_TIME_LIMIT_SECONDS,
-        Math.min(MAX_ROUND_TIME_LIMIT_SECONDS, gameSettings.roundTimeLimitSeconds));
 
     return rooms.computeIfAbsent(roomId, id -> {
       RoomState room = new RoomState();
@@ -213,7 +216,7 @@ public class GameService {
       room.roundCount++;
       room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
       room.allTargets.add(getRandomTarget(room.roomSettings.mapId));
-      room.roundEndsAt = System.currentTimeMillis() + room.roomSettings.roundTimeLimitSeconds * 1000L;
+      room.roundEndsAt = computeRoundEndsAt(room.roomSettings.roundTimeLimitSeconds);
     }
     broadcast(roomId, new ServerMessage("ROUND_STARTED", room));
     return true;
@@ -224,7 +227,16 @@ public class GameService {
     room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
     room.allTargets.add(getRandomTarget(room.roomSettings.mapId));
     room.allGuesses = new ArrayList<Map<String, LatLng>>();
-    room.roundEndsAt = System.currentTimeMillis() + room.roomSettings.roundTimeLimitSeconds * 1000L;
+    room.roundEndsAt = computeRoundEndsAt(room.roomSettings.roundTimeLimitSeconds);
+  }
+
+  // null means unlimited — the round timeout scheduler and client countdown both already treat a
+  // null roundEndsAt as "no deadline", so this is the only place that needs to know about it.
+  private Long computeRoundEndsAt(int roundTimeLimitSeconds) {
+    if (roundTimeLimitSeconds <= 0) {
+      return null;
+    }
+    return System.currentTimeMillis() + roundTimeLimitSeconds * 1000L;
   }
 
   public void broadcast(String roomId, ServerMessage message) {
@@ -239,6 +251,16 @@ public class GameService {
 
   public RoomState getRoomState(String roomId) {
     return rooms.get(roomId);
+  }
+
+  /** Used to power the "you have a game in progress" reconnect banner. */
+  public RoomState findActiveRoomForUser(String username) {
+    for (RoomState room : rooms.values()) {
+      if (room.players != null && room.players.contains(username)) {
+        return room;
+      }
+    }
+    return null;
   }
 
   public void closeRoom(String roomId) {

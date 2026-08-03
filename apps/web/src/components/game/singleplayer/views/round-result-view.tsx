@@ -3,6 +3,7 @@ import { Coords } from "@/types/geo";
 import { formatDistance } from "@/lib/geo";
 import SummaryMap from "@/components/game/summary-map";
 import AnimatedScore from "@/components/game/animated-score";
+import StandingsList, { StandingsEntry } from "@/components/game/standings-list";
 
 interface Props {
   score: number;
@@ -14,6 +15,8 @@ interface Props {
   zoom: number;
   onNext: () => void;
   isFinalRound: boolean;
+  username?: string;
+  standings?: StandingsEntry[];
 }
 
 const RoundResultView: React.FC<Props> = ({
@@ -26,6 +29,8 @@ const RoundResultView: React.FC<Props> = ({
   zoom,
   onNext,
   isFinalRound,
+  username,
+  standings,
 }) => (
   <Box
     sx={{
@@ -45,6 +50,10 @@ const RoundResultView: React.FC<Props> = ({
         You were {formatDistance(distance)} away
       </Typography>
     </Paper>
+
+    {standings && standings.length > 1 && username && (
+      <StandingsList entries={standings} username={username} />
+    )}
 
     <Paper sx={{ width: "90%", height: "70%", p: 1 }}>
       <Box sx={{ overflow: "hidden", borderRadius: 1, width: "100%", height: "100%" }}>

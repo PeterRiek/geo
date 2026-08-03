@@ -8,6 +8,7 @@ import { generateRoomCode } from "@/lib/room-code";
 import ModeSelect from "./menu/ModeSelect";
 import SingleplayerSettings from "./menu/SingleplayerSettings";
 import MultiplayerSettings from "./menu/MultiplayerSettings";
+import RejoinBanner from "./menu/RejoinBanner";
 
 interface RoomSettings {
   mapId: number;
@@ -155,6 +156,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
         pt: 4,
       }}
     >
+      <RejoinBanner />
       <ModeSelect mode={mode} setMode={setMode} />
       <Divider sx={{ my: 1 }} />
       {mode === "singleplayer" ? (

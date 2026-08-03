@@ -60,10 +60,35 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const [codeCopied, setCodeCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [guessNotification, setGuessNotification] = useState<string>();
+  const seenGuessersRef = useRef<Set<string>>(new Set());
+  const trackedRoundRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     phaseContainerRef.current?.focus();
   }, [gameState?.roomPhase, gameState?.roundCount]);
+
+  useEffect(() => {
+    if (!gameState || gameState.roomPhase !== "ROUND_IN_PROGRESS") return;
+    const currentGuessers = new Set(
+      Object.keys(gameState.allGuesses[gameState.roundCount] ?? {})
+    );
+
+    if (trackedRoundRef.current !== gameState.roundCount) {
+      // New round: start tracking from scratch instead of notifying for
+      // guesses already present in the payload (e.g. right after reconnect).
+      trackedRoundRef.current = gameState.roundCount;
+      seenGuessersRef.current = currentGuessers;
+      return;
+    }
+
+    for (const guesser of currentGuessers) {
+      if (guesser !== username && !seenGuessersRef.current.has(guesser)) {
+        setGuessNotification(`${guesser} has guessed!`);
+      }
+    }
+    seenGuessersRef.current = currentGuessers;
+  }, [gameState, username]);
 
   const startRound = () => {
     setGuessLocation(undefined);
@@ -230,6 +255,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       content = (
         <PostgameView
           username={username}
+          players={gameState.players}
           allGuesses={gameState.allGuesses}
           allTargets={gameState.allTargets}
         />
@@ -378,7 +404,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       const otherGuesses = Object.entries(
         gameState.allGuesses[gameState.roundCount]
       )
-        .filter(([_username]) => _username !== username)
+        .filter(([_username, guess]) => _username !== username && guess != null)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         .map(([_, guess]) => guess);
 
@@ -391,6 +417,19 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         : { lat: 0, lng: 0 };
       const zoom = 1 + (score / 5000) * 8;
 
+      const roundStandings = (gameState.players ?? [])
+        .map((player) => {
+          const guess = gameState.allGuesses[gameState.roundCount][player];
+          const playerScore = guess
+            ? getGuessrScore(
+                getDistanceInKm(guess, gameState.allTargets[gameState.roundCount]),
+                10_000
+              )
+            : 0;
+          return { player, score: playerScore };
+        })
+        .sort((a, b) => b.score - a.score);
+
       content = (
         <RoundResultView
           score={score}
@@ -401,6 +440,8 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
           center={center}
           zoom={zoom}
           onNext={next}
+          username={username}
+          standings={roundStandings}
           isFinalRound={gameState.roundCount >= gameSettings.roundCount - 1}
         />
       );
@@ -438,6 +479,17 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         <Alert severity="error" onClose={() => setCopyError(false)}>
           Couldn&apos;t copy the code. Please copy the Room Code manually.
         </Alert>
+      </Snackbar>
+      <Snackbar
+        open={!!guessNotification}
+        autoHideDuration={3000}
+        onClose={() => setGuessNotification(undefined)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Chip
+          label={guessNotification}
+          sx={{ bgcolor: "rgba(0,0,0,0.6)", color: "#fff", fontWeight: 500 }}
+        />
       </Snackbar>
     </Box>
   );

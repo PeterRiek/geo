@@ -91,7 +91,7 @@ const AppHeader: React.FC<Props> = ({ username, canManageMaps }) => {
               </Button>
             )}
             <Button component={Link} href="/profile" startIcon={<AccountCircleIcon />}>
-              {username}
+              Profile
             </Button>
             <SignOutButton />
           </Stack>
@@ -173,7 +173,7 @@ const AppHeader: React.FC<Props> = ({ username, canManageMaps }) => {
                       <ListItemIcon>
                         <AccountCircleIcon fontSize="small" />
                       </ListItemIcon>
-                      <ListItemText>{username}</ListItemText>
+                      <ListItemText>Profile</ListItemText>
                     </ListItemButton>
                     <ListItemButton
                       onClick={() => {

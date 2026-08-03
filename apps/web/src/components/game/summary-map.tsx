@@ -6,7 +6,9 @@ import React, { useEffect, useRef } from "react";
 
 interface SummaryMapProps {
   guessLocation?: Coords;
-  otherGuesses?: Coords[];
+  // A timed-out player's guess comes through as null (server-side "no
+  // guess" marker), so callers may pass that straight through un-filtered.
+  otherGuesses?: (Coords | null | undefined)[];
   targetLocation: Coords;
   center?: Coords;
   zoom?: number;
@@ -33,6 +35,10 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
   const lineRef = useRef<google.maps.Polyline[]>([]);
 
   useEffect(() => {
+    // Guards a superseded run's rejection from firing handleMapsError() after
+    // a newer effect run (e.g. rapid round changes) already succeeded.
+    let cancelled = false;
+
     const initMap = async () => {
       installMapsAuthFailureHandler();
 
@@ -89,6 +95,7 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
 
       otherMarkerRefs.current = [];
       otherGuesses?.forEach((position) => {
+        if (!position) return;
         otherMarkerRefs.current?.push(
           new AdvancedMarkerElement({
             map,
@@ -112,7 +119,13 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
       });
     };
 
-    initMap().catch(() => handleMapsError());
+    initMap().catch(() => {
+      if (!cancelled) handleMapsError();
+    });
+
+    return () => {
+      cancelled = true;
+    };
     // Depend on primitive lat/lng values, not the center/guessLocation/targetLocation
     // objects themselves — callers (e.g. round-result-view) recompute those as new
     // object literals on every render, which would otherwise tear down and rebuild

@@ -25,6 +25,14 @@ const StreetViewPano: React.FC<StreetViewPanoProps> = ({
   useEffect(() => {
     installMapsAuthFailureHandler();
 
+    // Guards against a panorama from a superseded effect run (e.g. rapid
+    // round changes right after reconnecting) still being live when this
+    // effect re-runs — without it, the old panorama's listeners can fire
+    // (e.g. a transient non-OK status while it's being torn down) and
+    // trigger handleMapsError() even though nothing is actually wrong.
+    let cancelled = false;
+    let panorama: google.maps.StreetViewPanorama | undefined;
+
     const loader = new Loader({
       apiKey: process.env.NEXT_PUBLIC_MAPS_KEY!,
       version: "weekly",
@@ -33,7 +41,9 @@ const StreetViewPano: React.FC<StreetViewPanoProps> = ({
     loader
       .load()
       .then(() => {
-        const panorama = new google.maps.StreetViewPanorama(
+        if (cancelled) return;
+
+        panorama = new google.maps.StreetViewPanorama(
           containerRef.current as HTMLDivElement,
           {
             position: location,
@@ -53,6 +63,7 @@ const StreetViewPano: React.FC<StreetViewPanoProps> = ({
         );
 
         panorama.addListener("pov_changed", () => {
+          if (cancelled || !panorama) return;
           const pov = panorama.getPov();
           let delta = pov.heading - prevHeadingRef.current;
           delta = ((delta + 180) % 360 + 360) % 360 - 180;
@@ -62,15 +73,28 @@ const StreetViewPano: React.FC<StreetViewPanoProps> = ({
         });
 
         panorama.addListener("status_changed", () => {
+          if (cancelled || !panorama) return;
           if (panorama.getStatus() !== google.maps.StreetViewStatus.OK) {
             handleMapsError();
           }
         });
       })
       .catch(() => {
-        handleMapsError();
+        if (!cancelled) handleMapsError();
       });
-  }, [location, moveEnabled, zoomEnabled]);
+
+    return () => {
+      cancelled = true;
+      if (panorama) {
+        google.maps.event.clearInstanceListeners(panorama);
+      }
+    };
+    // Depend on primitive lat/lng, not the location object itself — callers
+    // (e.g. mutliplayer-game) get a fresh object from every gameState broadcast
+    // even when the round's target hasn't actually changed, which would
+    // otherwise tear down and recreate the whole panorama on every such update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.lat, location.lng, moveEnabled, zoomEnabled]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", pointerEvents: panEnabled ? "auto":"none" }}>

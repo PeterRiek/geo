@@ -9,6 +9,8 @@ public class GameSessionSummary {
   public Long id;
   public GameSession.Mode mode;
   public Long mapId;
+  public String mapName;
+  public String mapImageUrl;
   public int roundCount;
   public LocalDateTime finishedAt;
   public int yourScore;

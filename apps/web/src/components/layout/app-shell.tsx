@@ -12,9 +12,10 @@ interface Props {
 
 const AppShell: React.FC<Props> = ({ username, canManageMaps, children }) => {
   const pathname = usePathname();
-  const inGameplay = pathname?.startsWith("/game/play") ?? false;
+  const isFullScreenView =
+    pathname?.startsWith("/game/play") || pathname?.startsWith("/history/");
 
-  if (inGameplay) {
+  if (isFullScreenView) {
     return <>{children}</>;
   }
 

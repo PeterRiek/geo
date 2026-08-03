@@ -40,9 +40,7 @@ const InGameView: React.FC<Props> = ({
 }) => {
   const buttonLabel = roundFinished
     ? "DONE"
-    : guessLocation
-    ? "GUESS"
-    : "PLACE YOUR PIN";
+    : "GUESS";
 
   return (
     <>

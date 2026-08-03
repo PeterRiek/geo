@@ -2,23 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Box,
-  Chip,
-  List,
-  ListItemButton,
-  ListItemText,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Chip, Typography } from "@mui/material";
 import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
 import PeopleIcon from "@mui/icons-material/People";
 import GameFallback from "@/components/game/game-fallback";
+import HistoryListSkeleton from "@/components/game/history/history-list-skeleton";
+import { getPublicBackendOrigin } from "@/lib/backend-url";
 
 interface GameSessionSummary {
   id: number;
   mode: "SINGLEPLAYER" | "MULTIPLAYER";
   mapId: number;
+  mapName?: string;
+  mapImageUrl?: string;
   roundCount: number;
   finishedAt: string;
   yourScore: number;
@@ -58,7 +54,7 @@ const HistoryList: React.FC = () => {
   }
 
   if (!sessions) {
-    return <GameFallback variant="loading" title="Loading history..." />;
+    return <HistoryListSkeleton />;
   }
 
   if (sessions.length === 0) {
@@ -72,41 +68,90 @@ const HistoryList: React.FC = () => {
   }
 
   return (
-    <List sx={{ maxWidth: 600, mx: "auto", width: "100%" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        overflowY: "auto",
+        height: "100%",
+        maxWidth: 600,
+        mx: "auto",
+        width: "100%",
+        gap: 1,
+        boxSizing: "border-box",
+      }}
+    >
       {sessions.map((session) => (
-        <ListItemButton
+        <Box
           key={session.id}
           component={Link}
           href={`/history/${session.id}`}
-          sx={{ borderRadius: 1, mb: 1 }}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            p: 1,
+            borderRadius: 1,
+            textDecoration: "none",
+            color: "inherit",
+            border: "1px solid",
+            borderColor: "divider",
+            "&:hover": { bgcolor: "action.hover" },
+          }}
         >
-          <ListItemText
-            primary={
-              <Stack direction="row" spacing={1} alignItems="center">
-                {session.mode === "SINGLEPLAYER" ? (
-                  <SportsEsportsIcon fontSize="small" color="action" />
-                ) : (
-                  <PeopleIcon fontSize="small" color="action" />
-                )}
-                <Typography variant="body1">
-                  {session.mode === "SINGLEPLAYER"
-                    ? "Singleplayer"
-                    : `Duel vs ${session.otherPlayers.join(", ") || "?"}`}
-                </Typography>
-                <Chip
-                  label={`${session.yourScore} pts`}
-                  size="small"
-                  color="primary"
-                />
-              </Stack>
-            }
-            secondary={`${session.roundCount} rounds · ${new Date(
-              session.finishedAt
-            ).toLocaleString()}`}
-          />
-        </ListItemButton>
+          {session.mapImageUrl ? (
+            <Box
+              component="img"
+              src={`${getPublicBackendOrigin()}${session.mapImageUrl}`}
+              alt=""
+              sx={{
+                width: 96,
+                height: 96,
+                borderRadius: 1,
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <Box
+              sx={{
+                width: 96,
+                height: 96,
+                borderRadius: 1,
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: "action.selected",
+              }}
+            >
+              {session.mode === "SINGLEPLAYER" ? (
+                <SportsEsportsIcon color="action" fontSize="large" />
+              ) : (
+                <PeopleIcon color="action" fontSize="large" />
+              )}
+            </Box>
+          )}
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography variant="subtitle1" fontWeight={600} noWrap>
+                {session.mapName ?? "Unknown map"}
+              </Typography>
+              <Chip label={`${session.yourScore} pts`} size="small" color="primary" />
+            </Box>
+            <Typography variant="body2" color="text.secondary" noWrap>
+              {session.mode === "SINGLEPLAYER"
+                ? "Singleplayer"
+                : `Duel vs ${session.otherPlayers.join(", ") || "?"}`}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {session.roundCount} rounds &middot;{" "}
+              {new Date(session.finishedAt).toLocaleString()}
+            </Typography>
+          </Box>
+        </Box>
       ))}
-    </List>
+    </Box>
   );
 };
 

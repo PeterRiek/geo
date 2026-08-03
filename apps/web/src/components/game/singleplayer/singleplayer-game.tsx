@@ -124,6 +124,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
       content = (
         <PostgameView
           username={username}
+          players={gameState.players}
           allGuesses={gameState.allGuesses}
           allTargets={gameState.allTargets}
         />

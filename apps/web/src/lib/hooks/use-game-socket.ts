@@ -54,7 +54,14 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     );
     socketRef.current = ws;
 
+    // A stale socket from a superseded effect run (React StrictMode's dev
+    // double-invoke, or a real reconnect) can still fire onclose/onerror
+    // after the *new* socket has already opened — without this guard, that
+    // late event would clobber the current, correct "open" status.
+    const isCurrent = () => socketRef.current === ws;
+
     ws.onopen = () => {
+      if (!isCurrent()) return;
       setConnectionStatus("open");
       if (roomId) {
         pendingMessagesRef.current.push(JSON.stringify({ type: "JOIN", roomId }));
@@ -64,14 +71,17 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     };
 
     ws.onerror = () => {
+      if (!isCurrent()) return;
       setConnectionStatus("error");
     };
 
     ws.onclose = () => {
+      if (!isCurrent()) return;
       setConnectionStatus("closed");
     };
 
     ws.onmessage = (event) => {
+      if (!isCurrent()) return;
       const message = JSON.parse(event.data);
       switch (message.type) {
         case "JOINED_ROOM":

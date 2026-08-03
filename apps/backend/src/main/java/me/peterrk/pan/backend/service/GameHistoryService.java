@@ -17,11 +17,13 @@ import me.peterrk.pan.backend.dto.GameSettings;
 import me.peterrk.pan.backend.dto.ws.LatLng;
 import me.peterrk.pan.backend.dto.ws.RoomState;
 import me.peterrk.pan.backend.model.GameGuess;
+import me.peterrk.pan.backend.model.GameMap;
 import me.peterrk.pan.backend.model.GameRound;
 import me.peterrk.pan.backend.model.GameSession;
 import me.peterrk.pan.backend.model.GameSessionPlayer;
 import me.peterrk.pan.backend.model.User;
 import me.peterrk.pan.backend.repository.GameGuessRepository;
+import me.peterrk.pan.backend.repository.GameMapRepository;
 import me.peterrk.pan.backend.repository.GameRoundRepository;
 import me.peterrk.pan.backend.repository.GameSessionPlayerRepository;
 import me.peterrk.pan.backend.repository.GameSessionRepository;
@@ -41,15 +43,17 @@ public class GameHistoryService {
   private final GameSessionPlayerRepository gameSessionPlayerRepository;
   private final GameRoundRepository gameRoundRepository;
   private final GameGuessRepository gameGuessRepository;
+  private final GameMapRepository gameMapRepository;
 
   public GameHistoryService(UserRepository userRepository, GameSessionRepository gameSessionRepository,
       GameSessionPlayerRepository gameSessionPlayerRepository, GameRoundRepository gameRoundRepository,
-      GameGuessRepository gameGuessRepository) {
+      GameGuessRepository gameGuessRepository, GameMapRepository gameMapRepository) {
     this.userRepository = userRepository;
     this.gameSessionRepository = gameSessionRepository;
     this.gameSessionPlayerRepository = gameSessionPlayerRepository;
     this.gameRoundRepository = gameRoundRepository;
     this.gameGuessRepository = gameGuessRepository;
+    this.gameMapRepository = gameMapRepository;
   }
 
   @Transactional
@@ -129,6 +133,13 @@ public class GameHistoryService {
           summary.id = session.getId();
           summary.mode = session.getMode();
           summary.mapId = session.getMapId();
+          if (session.getMapId() != null) {
+            GameMap map = gameMapRepository.findById(session.getMapId()).orElse(null);
+            if (map != null) {
+              summary.mapName = map.getName();
+              summary.mapImageUrl = map.getImageUrl();
+            }
+          }
           summary.roundCount = session.getRoundCount();
           summary.finishedAt = session.getFinishedAt();
           summary.yourScore = gsp.getTotalScore();

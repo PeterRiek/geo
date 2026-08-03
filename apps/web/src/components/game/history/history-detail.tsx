@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Chip, Paper, Stack, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import { Coords } from "@/types/geo";
 import GameFallback from "@/components/game/game-fallback";
 import PostgameView from "@/components/game/singleplayer/views/postgame-view";
@@ -68,28 +68,16 @@ const HistoryDetail: React.FC<{ id: string; username: string }> = ({ id, usernam
     )
   );
 
-  const sortedPlayers = [...detail.players].sort((a, b) => b.totalScore - a.totalScore);
-
   return (
-    <Box>
-      {detail.mode === "MULTIPLAYER" && (
-        <Paper sx={{ maxWidth: 400, mx: "auto", mb: 2, p: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            Players
-          </Typography>
-          <Stack spacing={1}>
-            {sortedPlayers.map((player) => (
-              <Stack key={player.username} direction="row" justifyContent="space-between">
-                <Typography variant="body2">
-                  {player.username === username ? `${player.username} (you)` : player.username}
-                </Typography>
-                <Chip label={`${player.totalScore} pts`} size="small" color="primary" />
-              </Stack>
-            ))}
-          </Stack>
-        </Paper>
-      )}
-      <PostgameView username={username} allGuesses={allGuesses} allTargets={allTargets} />
+    <Box sx={{ height: "100%" }}>
+      <PostgameView
+        username={username}
+        players={detail.players.map((p) => p.username)}
+        allGuesses={allGuesses}
+        allTargets={allTargets}
+        backHref="/history"
+        backLabel="BACK TO HISTORY"
+      />
     </Box>
   );
 };
