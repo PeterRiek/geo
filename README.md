@@ -123,4 +123,10 @@ Two more things that trip people up when deploying behind a domain + HTTPS rever
 
 - **`NEXT_PUBLIC_WS_URL` needs no port** — just `wss://your-domain/ws`. The browser only ever talks to your domain on 443; the actual container ports are an internal detail of how your proxy reaches them.
 - **The proxy must forward the WebSocket upgrade**, not just the HTTP request. For nginx, that means explicitly setting `Upgrade`/`Connection` headers on the `/ws` location block — a plain `proxy_pass` alone will silently fail the handshake.
+- **The proxy must also forward `/uploads/`** to the `backend` container — uploaded map preview images are served from there (`GameMap.imageUrl`, built client-side as `https://your-domain/uploads/images/<file>`; see `WebConfig`/`SecurityConfig` in the backend). A proxy config with only `/` → `web` and `/ws` → `backend` routes `/uploads/` to the `web` container by default, which has no such route and 404s — the images will load fine when the frontend is pointed straight at the backend (e.g. local dev), masking the gap until you deploy behind the real domain. For nginx, a plain `proxy_pass` block is enough (no upgrade headers needed, unlike `/ws`):
+  ```nginx
+  location /uploads/ {
+      proxy_pass http://backend:8080/uploads/;
+  }
+  ```
 - If the repo is private, Portainer's Git integration (used to fetch `docker-compose.yml` itself) needs its own credentials — a GitHub Personal Access Token, not your account password, since GitHub disabled password auth for git operations.
