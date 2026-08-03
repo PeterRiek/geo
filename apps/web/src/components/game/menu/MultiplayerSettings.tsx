@@ -16,6 +16,8 @@ import {
   Tooltip,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import LoginIcon from "@mui/icons-material/Login";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import SelectedMapSummary from "./SelectedMapSummary";
 import NMPZSelect from "./NMPZSelect";
 
@@ -97,11 +99,18 @@ const MultiplayerSettings: React.FC<any> = ({
       color="primary"
       sx={{ mb: 2 }}
     >
-      <ToggleButton value="join">Join</ToggleButton>
-      <ToggleButton value="create">Create</ToggleButton>
+      <ToggleButton value="join">
+        <LoginIcon sx={{ mr: 1 }} fontSize="small" />
+        Join
+      </ToggleButton>
+      <ToggleButton value="create">
+        <AddCircleOutlineIcon sx={{ mr: 1 }} fontSize="small" />
+        Create
+      </ToggleButton>
     </ToggleButtonGroup>
 
     <Container
+      maxWidth="md"
       sx={{
         flex: 1,
         minHeight: 0,
@@ -135,7 +144,7 @@ const MultiplayerSettings: React.FC<any> = ({
         </>
       ) : (
         <>
-          <Paper sx={{ p: 1 }}>
+          <Paper sx={{ overflow: "hidden" }}>
             <SelectedMapSummary maps={maps} selectedMap={selectedMap} mapsLoading={mapsLoading} />
           </Paper>
           <Paper sx={{ p: 1 }}>
