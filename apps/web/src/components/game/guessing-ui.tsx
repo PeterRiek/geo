@@ -29,14 +29,14 @@ const GuessrUI: React.FC<{
   const isSm = useMediaQuery(theme.breakpoints.between("sm", "md"));
   const [pulsing, setPulsing] = useState(false);
 
-  let normalWidth = "20%";
-  let normalHeight = "20%";
-  let hoverWidth = "50%";
-  let hoverHeight = "60%";
+  let normalWidth = "25%";
+  let normalHeight = "25%";
+  let hoverWidth = "55%";
+  let hoverHeight = "65%";
 
   if (isSm) {
     normalWidth = "40%";
-    normalHeight = "20%";
+    normalHeight = "25%";
     hoverWidth = "85%";
     hoverHeight = "60%";
   }
@@ -55,7 +55,6 @@ const GuessrUI: React.FC<{
           alignItems: "end",
           zIndex: 10,
           pointerEvents: "none",
-          p: 2,
         }}
       >
         <Box
@@ -66,6 +65,7 @@ const GuessrUI: React.FC<{
             transition: "width 0.1s ease, height 0.1s ease",
             ":hover": { width: hoverWidth, height: hoverHeight },
             pointerEvents: "auto",
+			p: 2
           }}
         >
           {/* Select Map Container */}
