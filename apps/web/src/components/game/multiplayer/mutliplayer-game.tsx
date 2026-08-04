@@ -512,6 +512,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         autoHideDuration={3000}
         onClose={() => setGuessNotification(undefined)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        sx={{ top: { xs: 72, sm: 24 } }}
       >
         <Chip
           label={guessNotification}
