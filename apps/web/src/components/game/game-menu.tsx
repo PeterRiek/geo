@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Divider } from "@mui/material";
 import useGameSocket from "@/lib/hooks/use-game-socket";
 import { generateRoomCode } from "@/lib/room-code";
+import { apiFetch } from "@/lib/api-fetch";
 import ModeSelect from "./menu/ModeSelect";
 import SingleplayerSettings from "./menu/SingleplayerSettings";
 import MultiplayerSettings from "./menu/MultiplayerSettings";
@@ -149,7 +150,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   useEffect(() => {
     const loadMaps = async () => {
       setMapsLoading(true);
-      const resp = await fetch("/api/gamemap");
+      const resp = await apiFetch("/api/gamemap");
       const data = await resp.json();
       setMaps(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

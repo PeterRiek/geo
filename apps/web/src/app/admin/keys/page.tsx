@@ -29,6 +29,7 @@ import {
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import BlockIcon from "@mui/icons-material/Block";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface RoleData {
   id: number;
@@ -62,13 +63,13 @@ const AdminKeysPage = () => {
   const [copiedMessage, setCopiedMessage] = useState("");
 
   const loadKeys = async () => {
-    const res = await fetch("/api/admin/keys");
+    const res = await apiFetch("/api/admin/keys");
     if (res.ok) setKeys(await res.json());
   };
 
   useEffect(() => {
     const init = async () => {
-      const resMe = await fetch("/api/user/me");
+      const resMe = await apiFetch("/api/user/me");
       const me = resMe.ok ? await resMe.json() : undefined;
 
       if (!me?.permissions?.includes("MANAGE_KEYS")) {
@@ -78,7 +79,7 @@ const AdminKeysPage = () => {
       }
       setAuthorized(true);
 
-      const resRoles = await fetch("/api/admin/roles");
+      const resRoles = await apiFetch("/api/admin/roles");
       if (resRoles.ok) {
         const roleList: RoleData[] = await resRoles.json();
         setRoles(roleList);
@@ -96,7 +97,7 @@ const AdminKeysPage = () => {
     setGenerating(true);
     setGenerateError("");
     try {
-      const res = await fetch("/api/admin/keys", {
+      const res = await apiFetch("/api/admin/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -123,7 +124,7 @@ const AdminKeysPage = () => {
   };
 
   const handleRevoke = async (id: number) => {
-    const res = await fetch(`/api/admin/keys/${id}`, { method: "DELETE" });
+    const res = await apiFetch(`/api/admin/keys/${id}`, { method: "DELETE" });
     if (res.ok) await loadKeys();
   };
 

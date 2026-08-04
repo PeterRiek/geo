@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import { apiFetch } from "@/lib/api-fetch";
 
 const InfoTooltip: React.FC<{ title: string }> = ({ title }) => (
   <Tooltip title={title}>
@@ -61,7 +62,7 @@ const UploadMapForm: React.FC = () => {
       const formData = new FormData();
       formData.append("coordinates", coordinatesFile);
 
-      const res = await fetch("/api/gamemap/calculate-max-distance", {
+      const res = await apiFetch("/api/gamemap/calculate-max-distance", {
         method: "POST",
         body: formData,
       });
@@ -97,7 +98,7 @@ const UploadMapForm: React.FC = () => {
       formData.append("isPublic", String(isPublic));
       formData.append("maxErrorDistanceKm", String(maxErrorDistanceKm));
 
-      const res = await fetch("/api/gamemap", { method: "POST", body: formData });
+      const res = await apiFetch("/api/gamemap", { method: "POST", body: formData });
       const data = await res.json().catch(() => undefined);
 
       if (!res.ok) {

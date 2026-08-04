@@ -9,6 +9,7 @@ import MapIcon from "@mui/icons-material/Map";
 import GameFallback from "@/components/game/game-fallback";
 import HistoryListSkeleton from "@/components/game/history/history-list-skeleton";
 import { getPublicBackendOrigin } from "@/lib/backend-url";
+import { apiFetch } from "@/lib/api-fetch";
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
 
@@ -40,7 +41,7 @@ const HistoryList: React.FC = () => {
   const load = () => {
     setError(false);
     setSessions(undefined);
-    fetch("/api/gamesession/history")
+    apiFetch("/api/gamesession/history")
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load history");
         return res.json();
