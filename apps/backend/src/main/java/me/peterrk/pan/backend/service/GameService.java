@@ -2,6 +2,7 @@ package me.peterrk.pan.backend.service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -32,6 +33,12 @@ public class GameService {
   private static final int MIN_ROUND_TIME_LIMIT_SECONDS = 15;
   private static final int MAX_ROUND_TIME_LIMIT_SECONDS = 300;
   private static final int DEFAULT_ROUND_TIME_LIMIT_SECONDS = 60;
+  private static final long TIME_PRESSURE_REMAINING_MS = 10_000;
+  // Floor for the WAITING-phase ready gate only — a lone straggler left mid-game must still be
+  // able to ready-up (or hit the between-rounds failsafe) alone, so this is NOT applied to the
+  // ROUND_RESULTS gate. See #maybeAdvance and #resolveExpiredReadyChecks.
+  private static final int MIN_PLAYERS_TO_START = 2;
+  private static final long READY_CHECK_COUNTDOWN_MS = 60_000;
 
   private final GameMapService gameMapService;
   private final GameHistoryService gameHistoryService;
@@ -109,6 +116,13 @@ public class GameService {
       players.add(username);
       room.players = new ArrayList<>(players);
       room.disconnectedPlayers.remove(username);
+      // Arm the lobby's ready-check failsafe exactly once, the moment the room first has enough
+      // players to conceivably start. players.size() only grows (no "leave room" mechanic), so
+      // this condition can only become true once per room.
+      if (room.roomPhase == RoomState.RoomPhase.WAITING && room.readyDeadline == null
+          && room.players.size() >= MIN_PLAYERS_TO_START) {
+        room.readyDeadline = System.currentTimeMillis() + READY_CHECK_COUNTDOWN_MS;
+      }
     }
     return room;
   }
@@ -122,6 +136,8 @@ public class GameService {
     if (room != null) {
       synchronized (room) {
         room.disconnectedPlayers.add(username);
+        // A disconnected player never counts as ready for either gate.
+        room.readyPlayers.remove(username);
       }
     }
   }
@@ -137,8 +153,26 @@ public class GameService {
         return false;
       }
       recordGuess(room, username, guess);
+      applyTimePressure(room);
       advanceIfComplete(room);
       return true;
+    }
+  }
+
+  /**
+   * Must be called while holding `synchronized (room)`. One-way, monotonically-decreasing clamp:
+   * never extends roundEndsAt, so reapplying on later guesses in the same round is a harmless
+   * no-op once already clamped. No broadcast of its own — the caller's existing broadcast (either
+   * GUESS_SUBMITTED or ROUND_RESULTS) already carries the mutated roundEndsAt to clients, and the
+   * frontend's countdown hook already reschedules whenever roundEndsAt changes.
+   */
+  private void applyTimePressure(RoomState room) {
+    if (!room.roomSettings.timePressure) {
+      return;
+    }
+    long clampedEndsAt = System.currentTimeMillis() + TIME_PRESSURE_REMAINING_MS;
+    if (room.roundEndsAt == null || room.roundEndsAt > clampedEndsAt) {
+      room.roundEndsAt = clampedEndsAt;
     }
   }
 
@@ -225,6 +259,12 @@ public class GameService {
     }
     computeRoundResults(room);
     room.roomPhase = RoomState.RoomPhase.ROUND_RESULTS;
+    // Arm the between-rounds ready gate fresh for this round's results — no floor check here
+    // (unlike the WAITING gate), the round already had players in it. Applies uniformly whether
+    // or not this is the final round: advancing to GAME_RESULTS is gated the same as advancing
+    // to the next round.
+    room.readyPlayers = new HashSet<>();
+    room.readyDeadline = System.currentTimeMillis() + READY_CHECK_COUNTDOWN_MS;
     broadcast(room.roomId, new ServerMessage("ROUND_RESULTS", room));
   }
 
@@ -240,19 +280,106 @@ public class GameService {
     closeRoom(room.roomId);
   }
 
-  public boolean startGame(String roomId) {
+  /**
+   * Toggles the caller's ready flag for whichever gate is currently open (WAITING's pre-round-1
+   * gate, or ROUND_RESULTS's between-rounds gate) and advances the room if that completes it.
+   * Returns false if the room doesn't exist or isn't in a gated phase right now.
+   */
+  public boolean setReady(String roomId, String username, boolean ready) {
     RoomState room = rooms.get(roomId);
     if (room == null) {
       return false;
     }
+    RoomState.RoomPhase newPhase;
     synchronized (room) {
-      if (room.roomPhase != RoomState.RoomPhase.WAITING) {
+      if (room.roomPhase != RoomState.RoomPhase.WAITING && room.roomPhase != RoomState.RoomPhase.ROUND_RESULTS) {
         return false;
       }
-      beginRound(room);
+      if (ready) {
+        room.readyPlayers.add(username);
+      } else {
+        room.readyPlayers.remove(username);
+      }
+      newPhase = maybeAdvance(room);
     }
-    broadcast(roomId, new ServerMessage("ROUND_STARTED", room));
+    if (newPhase == RoomState.RoomPhase.ROUND_IN_PROGRESS) {
+      broadcast(roomId, new ServerMessage("ROUND_STARTED", room));
+    } else if (newPhase == null) {
+      // Didn't advance (still waiting on someone) — let clients refresh their ready-state view.
+      // GAME_RESULTS needs no broadcast here: finishGame already sent it from inside the lock above.
+      broadcast(roomId, new ServerMessage("READY_STATUS", room));
+    }
     return true;
+  }
+
+  /**
+   * Must be called while holding `synchronized (room)`. Advances the room if every currently
+   * connected player is ready for its current gate, returning the phase it moved to (or null if
+   * it didn't advance). The WAITING gate additionally requires MIN_PLAYERS_TO_START connected —
+   * the ROUND_RESULTS gate has no such floor, so a lone player left mid-game can still ready up
+   * and keep playing solo.
+   */
+  private RoomState.RoomPhase maybeAdvance(RoomState room) {
+    Set<String> connected = connectedPlayers(room);
+    if (room.roomPhase == RoomState.RoomPhase.WAITING) {
+      if (connected.size() < MIN_PLAYERS_TO_START || !room.readyPlayers.containsAll(connected)) {
+        return null;
+      }
+      beginRound(room);
+      return RoomState.RoomPhase.ROUND_IN_PROGRESS;
+    }
+    if (room.roomPhase == RoomState.RoomPhase.ROUND_RESULTS) {
+      if (!room.readyPlayers.containsAll(connected)) {
+        return null;
+      }
+      advanceRoundOrFinish(room);
+      return room.roomPhase;
+    }
+    return null;
+  }
+
+  private Set<String> connectedPlayers(RoomState room) {
+    Set<String> connected = new HashSet<>(room.players);
+    connected.removeAll(room.disconnectedPlayers);
+    return connected;
+  }
+
+  /**
+   * Scanned every second by {@link RoundTimeoutScheduler}; force-advances any room whose current
+   * ready gate's failsafe deadline has passed. WAITING only force-starts with at least
+   * MIN_PLAYERS_TO_START connected (else it's a no-op this tick — readyDeadline stays in the past,
+   * so the very next tick re-checks against whatever the connected count is then, no re-arming
+   * needed). ROUND_RESULTS has no such floor — it always force-advances once the deadline passes.
+   */
+  public void resolveExpiredReadyChecks() {
+    long now = System.currentTimeMillis();
+    for (RoomState room : rooms.values()) {
+      boolean gated = room.roomPhase == RoomState.RoomPhase.WAITING
+          || room.roomPhase == RoomState.RoomPhase.ROUND_RESULTS;
+      if (!gated || room.readyDeadline == null || now < room.readyDeadline) {
+        continue;
+      }
+      RoomState.RoomPhase newPhase = null;
+      synchronized (room) {
+        gated = room.roomPhase == RoomState.RoomPhase.WAITING || room.roomPhase == RoomState.RoomPhase.ROUND_RESULTS;
+        if (!gated || room.readyDeadline == null || now < room.readyDeadline) {
+          continue;
+        }
+        if (room.roomPhase == RoomState.RoomPhase.WAITING) {
+          if (connectedPlayers(room).size() >= MIN_PLAYERS_TO_START) {
+            beginRound(room);
+            newPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
+          }
+        } else {
+          advanceRoundOrFinish(room);
+          newPhase = room.roomPhase;
+        }
+      }
+      if (newPhase == RoomState.RoomPhase.ROUND_IN_PROGRESS) {
+        broadcast(room.roomId, new ServerMessage("ROUND_STARTED", room));
+      }
+      // GAME_RESULTS already broadcast internally by finishGame via advanceRoundOrFinish.
+    }
   }
 
   public boolean nextRound(String roomId) {
@@ -264,17 +391,29 @@ public class GameService {
       if (room.roomPhase != RoomState.RoomPhase.ROUND_RESULTS) {
         return false;
       }
-      if (room.roundCount >= room.roomSettings.roundCount - 1) {
-        finishGame(room);
+      advanceRoundOrFinish(room);
+      if (room.roomPhase == RoomState.RoomPhase.GAME_RESULTS) {
         return true;
       }
-      room.roundCount++;
-      room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
-      room.allTargets.add(getRandomTarget(room.roomSettings.mapId));
-      room.roundEndsAt = computeRoundEndsAt(room.roomSettings.roundTimeLimitSeconds);
     }
     broadcast(roomId, new ServerMessage("ROUND_STARTED", room));
     return true;
+  }
+
+  /**
+   * Must be called while holding `synchronized (room)`, with `roomPhase == ROUND_RESULTS`. Always
+   * either lands on ROUND_IN_PROGRESS (caller broadcasts ROUND_STARTED) or GAME_RESULTS (finishGame
+   * already broadcasts internally — caller must not broadcast again).
+   */
+  private void advanceRoundOrFinish(RoomState room) {
+    if (room.roundCount >= room.roomSettings.roundCount - 1) {
+      finishGame(room);
+      return;
+    }
+    room.roundCount++;
+    room.roomPhase = RoomState.RoomPhase.ROUND_IN_PROGRESS;
+    room.allTargets.add(getRandomTarget(room.roomSettings.mapId));
+    room.roundEndsAt = computeRoundEndsAt(room.roomSettings.roundTimeLimitSeconds);
   }
 
   /** Must be called while holding `synchronized (room)` (or before the room is visible to other threads). */

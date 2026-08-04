@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import PlaceIcon from "@mui/icons-material/Place";
@@ -12,11 +12,13 @@ type Map = {
   id: number;
   name: string;
   imageUrl?: string;
+  description?: string;
   maxErrorDistanceKm?: number;
   ownerUsername?: string;
+  locationCount?: number;
 };
 
-// Placeholder copy until the backend exposes a real map description/location count.
+// Placeholder copy for maps that haven't been given a description yet.
 const DESCRIPTIONS = [
   "A hand-picked set of locations to test your geography skills.",
   "Explore diverse landscapes and landmarks across this map.",
@@ -73,25 +75,26 @@ const SelectedMapSummary: React.FC<{
     );
   }
 
-  const description = DESCRIPTIONS[seededInt(map.id, 0, DESCRIPTIONS.length - 1)];
-  const locationCount = seededInt(map.id, 25, 150);
+  const description =
+    map.description || DESCRIPTIONS[seededInt(map.id, 0, DESCRIPTIONS.length - 1)];
+  const locationCount = map.locationCount ?? 0;
 
   return (
     <Box sx={{ position: "relative", display: "flex", width: "100%", height: SUMMARY_HEIGHT }}>
       <Tooltip title="Change map">
         <IconButton
           href="/game/maps"
-          size="large"
+          size="small"
           sx={{
             position: "absolute",
-            top: 8,
-            right: 8,
+            top: 4,
+            right: 4,
             zIndex: 1,
             bgcolor: "background.paper",
             "&:hover": { bgcolor: "action.hover" },
           }}
         >
-          <SwapHorizIcon />
+          <SwapHorizIcon fontSize="small" />
         </IconButton>
       </Tooltip>
       <Box
@@ -113,48 +116,52 @@ const SelectedMapSummary: React.FC<{
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          gap: 0.5,
           px: 2,
+          py: 1.5,
         }}
       >
-        <Typography variant="h6" fontWeight={600} noWrap>
+        <Typography variant="h6" fontWeight={600} noWrap sx={{ flexShrink: 0, mb: 0.5 }}>
           {map.name}
         </Typography>
+
         <Typography
           variant="body2"
           color="text.secondary"
           sx={{
-            display: "-webkit-box",
-            WebkitBoxOrient: "vertical",
-            WebkitLineClamp: 2,
-            overflow: "hidden",
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
           }}
         >
           {description}
         </Typography>
-        <Stack direction="row" spacing={2}>
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <StraightenIcon fontSize="inherit" color="action" />
-            <Typography variant="body2" color="text.secondary" noWrap>
-              {(map.maxErrorDistanceKm ?? 0).toLocaleString()} km
-            </Typography>
+
+        <Divider sx={{ my: 1 }} />
+
+        <Stack spacing={0.5}>
+          <Stack direction="row" spacing={2}>
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <StraightenIcon fontSize="inherit" color="action" />
+              <Typography variant="body2" color="text.secondary" noWrap>
+                {(map.maxErrorDistanceKm ?? 0).toLocaleString()} km
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <PlaceIcon fontSize="inherit" color="action" />
+              <Typography variant="body2" color="text.secondary" noWrap>
+                {locationCount} locations
+              </Typography>
+            </Stack>
           </Stack>
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <PlaceIcon fontSize="inherit" color="action" />
-            <Typography variant="body2" color="text.secondary" noWrap>
-              {locationCount} locations
-            </Typography>
-          </Stack>
+          {map.ownerUsername && (
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <PersonIcon fontSize="inherit" color="action" />
+              <Typography variant="body2" color="text.secondary" noWrap>
+                {map.ownerUsername}
+              </Typography>
+            </Stack>
+          )}
         </Stack>
-        {map.ownerUsername && (
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <PersonIcon fontSize="inherit" color="action" />
-            <Typography variant="body2" color="text.secondary" noWrap>
-              {map.ownerUsername}
-            </Typography>
-          </Stack>
-        )}
       </Box>
     </Box>
   );

@@ -13,6 +13,7 @@ interface GameSettings {
   roundCount: number;
   roundTimeLimitSeconds: number;
   gameMode: GameMode;
+  timePressure?: boolean;
 }
 
 interface GameState {
@@ -27,6 +28,8 @@ interface GameState {
   players: string[];
   roundEndsAt?: number;
   disconnectedPlayers?: string[];
+  readyPlayers?: string[];
+  readyDeadline?: number;
 }
 
 export type ConnectionStatus = "connecting" | "open" | "closed" | "error";
@@ -104,6 +107,9 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
         case "PLAYER_STATUS":
           setGameState(message.payload);
           break;
+        case "READY_STATUS":
+          setGameState(message.payload);
+          break;
         case "CREATED_ROOM":
           setCreatedRoomId(message.payload.roomId);
           break;
@@ -137,8 +143,8 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     send({ type: "JOIN", roomId });
   };
 
-  const startGame = () => {
-    send({ type: "START_GAME", roomId });
+  const setReady = (ready: boolean) => {
+    send({ type: "READY", roomId, payload: ready });
   };
 
   const nextRound = () => {
@@ -156,7 +162,7 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     roomError,
     join,
     createRoom,
-    startGame,
+    setReady,
     nextRound,
     submitGuess,
     reconnect,

@@ -25,6 +25,9 @@ const NMPZSelect: React.FC<{
   setZoomEnabled: (val: boolean) => void;
   setRoundCount: (val: number) => void;
   setRoundTimeLimitSeconds: (val: number) => void;
+  // Extra Rounds/Time-style button+popover controls rendered in the same row (e.g. multiplayer's
+  // time-pressure toggle). Singleplayer omits this and the row is unchanged.
+  extraControls?: React.ReactNode;
 }> = ({
   moveEnabled,
   panEnabled,
@@ -36,6 +39,7 @@ const NMPZSelect: React.FC<{
   setZoomEnabled,
   setRoundCount,
   setRoundTimeLimitSeconds,
+  extraControls,
 }) => {
   const [roundsAnchor, setRoundsAnchor] = useState<HTMLElement | null>(null);
   const [timeLimitAnchor, setTimeLimitAnchor] = useState<HTMLElement | null>(null);
@@ -152,6 +156,8 @@ const NMPZSelect: React.FC<{
           />
         </Stack>
       </Popover>
+
+      {extraControls}
     </Stack>
   );
 };

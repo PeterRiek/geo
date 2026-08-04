@@ -43,10 +43,14 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.accessToken = user.accessToken;
         token.name = user.name!;
+      }
+      if (trigger === "update" && session) {
+        if (session.user?.name) token.name = session.user.name;
+        if (session.accessToken) token.accessToken = session.accessToken;
       }
       return token;
     },
@@ -70,4 +74,4 @@ export const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-export const { auth, handlers, signIn, signOut } = NextAuth(authConfig);
+export const { auth, handlers, signIn, signOut, unstable_update } = NextAuth(authConfig);

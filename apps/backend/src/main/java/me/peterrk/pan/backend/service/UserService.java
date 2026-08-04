@@ -1,5 +1,6 @@
 package me.peterrk.pan.backend.service;
 
+import me.peterrk.pan.backend.exception.UsernameAlreadyExistsException;
 import me.peterrk.pan.backend.model.User;
 import me.peterrk.pan.backend.repository.GameSessionPlayerRepository;
 import me.peterrk.pan.backend.repository.UserRepository;
@@ -59,5 +60,21 @@ public class UserService {
 
   public List<User> getAllUsers() {
     return userRepository.findAll();
+  }
+
+  /**
+   * Throws IllegalArgumentException for an empty/blank username and UsernameAlreadyExistsException
+   * if another user already has it. A no-op change (same username) is allowed through.
+   */
+  public User updateUsername(User user, String newUsername) {
+    String trimmed = newUsername == null ? "" : newUsername.trim();
+    if (trimmed.isEmpty()) {
+      throw new IllegalArgumentException("Username is required");
+    }
+    if (!trimmed.equals(user.getUsername()) && userRepository.findByUsername(trimmed).isPresent()) {
+      throw new UsernameAlreadyExistsException("Username already exists");
+    }
+    user.setUsername(trimmed);
+    return userRepository.save(user);
   }
 }

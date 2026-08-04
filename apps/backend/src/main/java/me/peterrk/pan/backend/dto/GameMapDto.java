@@ -16,15 +16,21 @@ public class GameMapDto {
   private final Long id;
   private final String name;
   private final String imageUrl;
+  private final String description;
   private final String ownerUsername;
   private final boolean isPublic;
   private final boolean isOwn;
   private final double maxErrorDistanceKm;
+  private final int locationCount;
 
-  public GameMapDto(GameMap map, User currentUser) {
+  // locationCount is passed in explicitly rather than resolved here — resolving it can require
+  // parsing the coordinates file and persisting a backfilled count, which doesn't belong inside a
+  // DTO constructor. See GameMapService#resolveLocationCount.
+  public GameMapDto(GameMap map, User currentUser, int locationCount) {
     this.id = map.getId();
     this.name = map.getName();
     this.imageUrl = map.getImageUrl();
+    this.description = map.getDescription() != null ? map.getDescription() : "";
     this.ownerUsername = map.getOwner() != null ? map.getOwner().getUsername() : null;
     this.isPublic = map.getIsPublic() == null || map.getIsPublic();
     this.isOwn = map.getOwner() != null && currentUser != null
@@ -32,6 +38,7 @@ public class GameMapDto {
     this.maxErrorDistanceKm = map.getMaxErrorDistanceKm() != null
         ? map.getMaxErrorDistanceKm()
         : GeoUtils.DEFAULT_MAX_ERROR_DISTANCE_KM;
+    this.locationCount = locationCount;
   }
 
   public Long getId() {
@@ -44,6 +51,10 @@ public class GameMapDto {
 
   public String getImageUrl() {
     return imageUrl;
+  }
+
+  public String getDescription() {
+    return description;
   }
 
   public String getOwnerUsername() {
@@ -65,5 +76,9 @@ public class GameMapDto {
 
   public double getMaxErrorDistanceKm() {
     return maxErrorDistanceKm;
+  }
+
+  public int getLocationCount() {
+    return locationCount;
   }
 }

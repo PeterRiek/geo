@@ -27,6 +27,7 @@ import me.peterrk.pan.backend.dto.ws.LatLng;
 import me.peterrk.pan.backend.model.GameMap;
 import me.peterrk.pan.backend.model.User;
 import me.peterrk.pan.backend.repository.GameMapRepository;
+import me.peterrk.pan.backend.util.GeoUtils;
 
 @Service
 public class GameMapService {
@@ -36,6 +37,7 @@ public class GameMapService {
   private static final int MAX_COORDINATE_COUNT = 20_000;
   private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
   private static final double MAX_ERROR_DISTANCE_KM_LIMIT = 20_000;
+  private static final int MAX_DESCRIPTION_LENGTH = 2_000;
   // Limited to formats the JDK's built-in ImageIO can decode (used below to verify the upload is
   // a genuine image, not just a file with a spoofed content-type) — no webp plugin on the classpath.
   private static final Map<String, String> ALLOWED_IMAGE_TYPES = Map.of(
@@ -125,7 +127,7 @@ public class GameMapService {
    * 400) and IOException for storage failures (caller should respond 500).
    */
   public GameMap uploadMap(String name, MultipartFile coordinatesFile, MultipartFile imageFile, User owner,
-      boolean isPublic, Double maxErrorDistanceKm) throws IOException {
+      boolean isPublic, Double maxErrorDistanceKm, String description) throws IOException {
     String trimmedName = name == null ? "" : name.trim();
     if (trimmedName.isEmpty()) {
       throw new IllegalArgumentException("Map name is required");
@@ -137,9 +139,10 @@ public class GameMapService {
       throw new IllegalArgumentException("A preview image is required");
     }
     validateMaxErrorDistance(maxErrorDistanceKm);
+    String trimmedDescription = validateDescription(description);
 
     byte[] coordinatesBytes = coordinatesFile.getBytes();
-    validateCoordinates(coordinatesBytes);
+    List<LatLng> coordinates = validateCoordinates(coordinatesBytes);
 
     byte[] imageBytes = validateImage(imageFile);
     String imageExtension = ALLOWED_IMAGE_TYPES.get(imageFile.getContentType());
@@ -163,6 +166,8 @@ public class GameMapService {
       gameMap.setOwner(owner);
       gameMap.setIsPublic(isPublic);
       gameMap.setMaxErrorDistanceKm(maxErrorDistanceKm);
+      gameMap.setDescription(trimmedDescription);
+      gameMap.setLocationCount(coordinates.size());
       return gameMapRepository.save(gameMap);
     } catch (Exception e) {
       Files.deleteIfExists(coordinatesPath);
@@ -172,11 +177,58 @@ public class GameMapService {
   }
 
   /**
+   * Returns this map's cached location count, computing and persisting it once for legacy rows
+   * that predate the locationCount column. A transient read/parse failure (getCustomCoordinates
+   * swallows all exceptions into an empty list) returns 0 for this call without persisting, so a
+   * later read retries the parse instead of permanently caching a wrong 0 — uploadMap's
+   * validateCoordinates already rejects genuinely-empty coordinate files at write time, so a real
+   * map should never legitimately resolve to 0.
+   */
+  public int resolveLocationCount(GameMap map) {
+    if (map.getLocationCount() != null) {
+      return map.getLocationCount();
+    }
+    List<LatLng> coordinates = getCustomCoordinates(map.getId());
+    if (coordinates.isEmpty()) {
+      return 0;
+    }
+    int count = coordinates.size();
+    map.setLocationCount(count);
+    gameMapRepository.save(map);
+    return count;
+  }
+
+  /**
+   * Suggests a maxErrorDistanceKm for a not-yet-uploaded coordinates file: the haversine distance
+   * between the NE and SW corners of the coordinates' bounding box. Doesn't touch the DB or
+   * require a map to exist yet — reuses the same validation uploadMap applies (size/range limits).
+   * Throws IllegalArgumentException for validation failures, IOException for unreadable JSON.
+   */
+  public double calculateMaxErrorDistanceKm(MultipartFile coordinatesFile) throws IOException {
+    if (coordinatesFile == null || coordinatesFile.isEmpty()) {
+      throw new IllegalArgumentException("A coordinates JSON file is required");
+    }
+    List<LatLng> coordinates = validateCoordinates(coordinatesFile.getBytes());
+
+    double minLat = Double.MAX_VALUE;
+    double maxLat = -Double.MAX_VALUE;
+    double minLng = Double.MAX_VALUE;
+    double maxLng = -Double.MAX_VALUE;
+    for (LatLng c : coordinates) {
+      minLat = Math.min(minLat, c.lat);
+      maxLat = Math.max(maxLat, c.lat);
+      minLng = Math.min(minLng, c.lng);
+      maxLng = Math.max(maxLng, c.lng);
+    }
+    return GeoUtils.distanceKm(new LatLng(minLat, minLng), new LatLng(maxLat, maxLng));
+  }
+
+  /**
    * Partial update — only non-null arguments are applied. Throws AccessDeniedException unless the
    * caller owns the map or holds MANAGE_MAPS (admin override, e.g. for ownerless legacy rows).
    */
-  public GameMap updateMap(Long mapId, String name, Boolean isPublic, Double maxErrorDistanceKm, User currentUser,
-      boolean isAdmin) {
+  public GameMap updateMap(Long mapId, String name, Boolean isPublic, Double maxErrorDistanceKm, String description,
+      User currentUser, boolean isAdmin) {
     GameMap map = getGameMap(mapId);
     if (map == null) {
       return null;
@@ -197,6 +249,9 @@ public class GameMapService {
     if (maxErrorDistanceKm != null) {
       validateMaxErrorDistance(maxErrorDistanceKm);
       map.setMaxErrorDistanceKm(maxErrorDistanceKm);
+    }
+    if (description != null) {
+      map.setDescription(validateDescription(description));
     }
     return gameMapRepository.save(map);
   }
@@ -242,6 +297,14 @@ public class GameMapService {
       throw new IllegalArgumentException(
           "Boundary scale must be between 0 and " + (int) MAX_ERROR_DISTANCE_KM_LIMIT + " km");
     }
+  }
+
+  private String validateDescription(String description) {
+    String trimmed = description == null ? "" : description.trim();
+    if (trimmed.length() > MAX_DESCRIPTION_LENGTH) {
+      throw new IllegalArgumentException("Description is too long (max " + MAX_DESCRIPTION_LENGTH + " characters)");
+    }
+    return trimmed;
   }
 
   private List<LatLng> validateCoordinates(byte[] coordinatesBytes) throws IOException {

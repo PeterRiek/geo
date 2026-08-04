@@ -46,6 +46,14 @@ public class GameMap {
   @Column(name = "max_error_distance_km")
   private Double maxErrorDistanceKm;
 
+  @Column(name = "description", columnDefinition = "TEXT")
+  private String description;
+
+  // Nullable for the same reason as description/isPublic/maxErrorDistanceKm. Null means a legacy
+  // row predating this column — lazily backfilled on read, see GameMapService#resolveLocationCount.
+  @Column(name = "location_count")
+  private Integer locationCount;
+
   public GameMap() {
   }
 
@@ -114,5 +122,21 @@ public class GameMap {
 
   public void setMaxErrorDistanceKm(Double maxErrorDistanceKm) {
     this.maxErrorDistanceKm = maxErrorDistanceKm;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
+  public Integer getLocationCount() {
+    return locationCount;
+  }
+
+  public void setLocationCount(Integer locationCount) {
+    this.locationCount = locationCount;
   }
 }

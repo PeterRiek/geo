@@ -33,4 +33,11 @@ public class RoomState {
   public Long roundEndsAt;
   // Usernames that are still room members but have no live socket right now.
   public Set<String> disconnectedPlayers = new HashSet<>();
+
+  // Usernames ready for whichever transition is currently gated: starting round 1 (while
+  // WAITING) or advancing past the current round's results (while ROUND_RESULTS). Reset fresh
+  // each time a new gate opens — see GameService#advanceIfComplete and #joinRoom.
+  public Set<String> readyPlayers = new HashSet<>();
+  // Epoch millis the current gate's failsafe force-advances the room regardless of ready state.
+  public Long readyDeadline;
 }

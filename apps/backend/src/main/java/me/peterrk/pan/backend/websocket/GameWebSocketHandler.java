@@ -77,8 +77,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
       }
 
-      case "START_GAME" -> {
-        if (!gameService.startGame(msg.roomId)) {
+      case "READY" -> {
+        Boolean ready = mapper.convertValue(msg.payload, Boolean.class);
+        if (!gameService.setReady(msg.roomId, username, ready)) {
           session.sendMessage(new TextMessage(mapper.writeValueAsBytes(new ServerMessage("INVALID_OPERATION"))));
         }
       }

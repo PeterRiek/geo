@@ -142,6 +142,10 @@ public class GameHistoryService {
             }
           }
           summary.roundCount = session.getRoundCount();
+          summary.roundTimeLimitSeconds = session.getRoundTimeLimitSeconds();
+          summary.allowMove = session.isAllowMove();
+          summary.allowPan = session.isAllowPan();
+          summary.allowZoom = session.isAllowZoom();
           summary.finishedAt = session.getFinishedAt();
           summary.yourScore = gsp.getTotalScore();
           summary.otherPlayers = gameSessionPlayerRepository.findBySessionId(session.getId()).stream()

@@ -12,6 +12,10 @@ public class GameSessionSummary {
   public String mapName;
   public String mapImageUrl;
   public int roundCount;
+  public int roundTimeLimitSeconds;
+  public boolean allowMove;
+  public boolean allowPan;
+  public boolean allowZoom;
   public LocalDateTime finishedAt;
   public int yourScore;
   public List<String> otherPlayers;

@@ -46,7 +46,7 @@ public class GameMapController {
   public ResponseEntity<?> getAllGameMaps(Authentication auth) {
     User currentUser = currentUser(auth);
     List<GameMapDto> maps = gameMapService.getVisibleGameMaps(currentUser).stream()
-        .map(m -> new GameMapDto(m, currentUser))
+        .map(m -> new GameMapDto(m, currentUser, gameMapService.resolveLocationCount(m)))
         .toList();
     return ResponseEntity.status(HttpStatus.OK).body(maps);
   }
@@ -57,7 +57,8 @@ public class GameMapController {
     GameMap gameMap = accessibleMap(mapId, currentUser);
     if (gameMap == null)
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
-    return ResponseEntity.status(HttpStatus.OK).body(new GameMapDto(gameMap, currentUser));
+    return ResponseEntity.status(HttpStatus.OK)
+        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap)));
   }
 
   @GetMapping("/{id}/locations")
@@ -97,18 +98,32 @@ public class GameMapController {
       @RequestParam("coordinates") MultipartFile coordinatesFile,
       @RequestParam("image") MultipartFile imageFile,
       @RequestParam(value = "isPublic", defaultValue = "false") boolean isPublic,
-      @RequestParam(value = "maxErrorDistanceKm", required = false) Double maxErrorDistanceKm) throws IOException {
+      @RequestParam(value = "maxErrorDistanceKm", required = false) Double maxErrorDistanceKm,
+      @RequestParam(value = "description", required = false) String description) throws IOException {
     User currentUser = currentUser(auth);
     GameMap gameMap = gameMapService.uploadMap(name, coordinatesFile, imageFile, currentUser, isPublic,
-        maxErrorDistanceKm);
-    return ResponseEntity.status(HttpStatus.CREATED).body(new GameMapDto(gameMap, currentUser));
+        maxErrorDistanceKm, description);
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap)));
+  }
+
+  public record MaxDistanceResponse(double maxErrorDistanceKm) {
+  }
+
+  // Standalone calculation — doesn't require the map to exist yet, just a coordinates file
+  // freshly picked in the upload form. Same exception-propagation convention as uploadMap above.
+  @PostMapping("/calculate-max-distance")
+  public ResponseEntity<?> calculateMaxDistance(@RequestParam("coordinates") MultipartFile coordinatesFile)
+      throws IOException {
+    double km = gameMapService.calculateMaxErrorDistanceKm(coordinatesFile);
+    return ResponseEntity.ok(new MaxDistanceResponse(km));
   }
 
   // Explicit @JsonProperty on the boolean component: Jackson's is-stripping convention for
   // isXxx()-style accessors can otherwise bind "isPublic" as "public" — see GameMapDto for the
   // same issue on the response side.
   public record UpdateMapRequest(String name, @JsonProperty("isPublic") Boolean isPublic,
-      Double maxErrorDistanceKm) {
+      Double maxErrorDistanceKm, String description) {
   }
 
   @PatchMapping("/{id}")
@@ -116,10 +131,10 @@ public class GameMapController {
       @RequestBody UpdateMapRequest body) {
     User currentUser = currentUser(auth);
     GameMap gameMap = gameMapService.updateMap(mapId, body.name(), body.isPublic(), body.maxErrorDistanceKm(),
-        currentUser, isAdmin(auth));
+        body.description(), currentUser, isAdmin(auth));
     if (gameMap == null)
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
-    return ResponseEntity.ok(new GameMapDto(gameMap, currentUser));
+    return ResponseEntity.ok(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap)));
   }
 
   @DeleteMapping("/{id}")

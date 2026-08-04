@@ -6,6 +6,10 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 export interface StandingsEntry {
   player: string;
   score: number;
+  // Cumulative score through this point in the game. Omit for a standings list that's already
+  // showing the game's grand total (e.g. the final postgame summary) — pass it for any
+  // "this round's score" list where the running total is useful extra context.
+  totalScore?: number;
 }
 
 const StandingsList: React.FC<{ entries: StandingsEntry[]; username: string }> = ({
@@ -33,6 +37,7 @@ const StandingsList: React.FC<{ entries: StandingsEntry[]; username: string }> =
               </Stack>
               <Typography variant="body1" fontWeight={600}>
                 {entry.score} pts
+                {entry.totalScore !== undefined && ` (${entry.totalScore} total)`}
               </Typography>
             </Stack>
           );
