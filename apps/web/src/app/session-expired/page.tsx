@@ -6,7 +6,7 @@ import React, { useEffect } from "react";
 
 const SessionExpiredPage = () => {
   useEffect(() => {
-    logout();
+    logout("/login");
   }, []);
 
   return (

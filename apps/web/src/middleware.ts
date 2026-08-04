@@ -111,8 +111,11 @@ const middleware = async (request: NextRequest) => {
       clearTimeout(timeout);
 
       if (res.status === 401) {
+        // JwtAuthFilter returns one of three distinct messages for an expired token, an
+        // undecodable/malformed one, or one that no longer matches the user — all three mean the
+        // same thing to the frontend: re-authenticate.
         const errorData = await res.json();
-        if (errorData.error === "JWT token expired") {
+        if (typeof errorData.error === "string" && errorData.error.startsWith("JWT token")) {
           return NextResponse.redirect(new URL("/session-expired", request.url));
         }
         return NextResponse.redirect(new URL("/error", request.url));

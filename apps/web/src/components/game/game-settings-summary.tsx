@@ -1,5 +1,6 @@
 import { Chip, Paper, Skeleton, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   mapId: string | number;
@@ -21,7 +22,7 @@ const GameSettingsSummary: React.FC<Props> = ({
   useEffect(() => {
     const loadMapName = async () => {
       try {
-        const res = await fetch(`/api/gamemap/${mapId}`);
+        const res = await apiFetch(`/api/gamemap/${mapId}`);
         if (!res.ok) return;
         const data = await res.json();
         setMapName(data.name);

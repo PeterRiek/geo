@@ -27,6 +27,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { logout } from "@/lib/actions/auth";
+import { apiFetch } from "@/lib/api-fetch";
 import SignOutButton from "@/components/auth/sing-out-button";
 import HistoryList from "@/components/game/history/history-list";
 import Link from "next/link";
@@ -68,14 +69,14 @@ const ProfilePage = () => {
   const [keySuccess, setKeySuccess] = useState("");
 
   const refreshUser = async () => {
-    const resMe = await fetch("/api/user/me");
+    const resMe = await apiFetch("/api/user/me");
     if (resMe.ok) {
       const me = await resMe.json();
       setData(me);
       setUsername(me.username);
     }
 
-    const resCanPlay = await fetch("/api/user/can-play");
+    const resCanPlay = await apiFetch("/api/user/can-play");
     if (resCanPlay.ok) setCanPlay(await resCanPlay.json());
   };
 
@@ -103,7 +104,7 @@ const ProfilePage = () => {
     setKeyError("");
     setKeySuccess("");
     try {
-      const res = await fetch("/api/user/activate-key", {
+      const res = await apiFetch("/api/user/activate-key", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: trimmed }),
@@ -140,7 +141,7 @@ const ProfilePage = () => {
     setUsernameError("");
     setUsernameSaved(false);
     try {
-      const res = await fetch("/api/user/me", {
+      const res = await apiFetch("/api/user/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: trimmed }),
@@ -167,7 +168,7 @@ const ProfilePage = () => {
     setDeleting(true);
     setDeleteError("");
     try {
-      const res = await fetch("/api/auth/delete", { method: "DELETE" });
+      const res = await apiFetch("/api/auth/delete", { method: "DELETE" });
       if (!res.ok) {
         setDeleteError("Failed to delete account. Please try again.");
         setDeleting(false);

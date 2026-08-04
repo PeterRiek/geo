@@ -42,6 +42,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { getPublicBackendOrigin } from "@/lib/backend-url";
+import { apiFetch } from "@/lib/api-fetch";
 import MapListSkeleton from "./MapListSkeleton";
 
 interface GameMap {
@@ -120,7 +121,7 @@ const MapsLibrary: React.FC = () => {
   useEffect(() => {
     const loadMaps = async () => {
       try {
-        const res = await fetch("/api/gamemap");
+        const res = await apiFetch("/api/gamemap");
         if (!res.ok) {
           setLoadError("Failed to load maps.");
           return;
@@ -144,7 +145,7 @@ const MapsLibrary: React.FC = () => {
       prev?.map((m) => (m.id === map.id ? { ...m, isFavorite: nextFavorite } : m))
     );
     try {
-      const res = await fetch(`/api/gamemap/${map.id}/favorite`, {
+      const res = await apiFetch(`/api/gamemap/${map.id}/favorite`, {
         method: nextFavorite ? "PUT" : "DELETE",
       });
       if (!res.ok && res.status !== 204) {
@@ -185,7 +186,7 @@ const MapsLibrary: React.FC = () => {
     setEdit({ ...edit, calculating: true, calculateError: undefined });
 
     try {
-      const res = await fetch(`/api/gamemap/${edit.map.id}/calculate-max-distance`);
+      const res = await apiFetch(`/api/gamemap/${edit.map.id}/calculate-max-distance`);
       const data = await res.json().catch(() => undefined);
 
       if (!res.ok) {
@@ -212,7 +213,7 @@ const MapsLibrary: React.FC = () => {
     setEdit({ ...edit, submitting: true, error: undefined });
 
     try {
-      const res = await fetch(`/api/gamemap/${edit.map.id}`, {
+      const res = await apiFetch(`/api/gamemap/${edit.map.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -242,7 +243,7 @@ const MapsLibrary: React.FC = () => {
     setDeleteError(undefined);
 
     try {
-      const res = await fetch(`/api/gamemap/${deleteTarget.id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/gamemap/${deleteTarget.id}`, { method: "DELETE" });
       if (!res.ok && res.status !== 204) {
         const data = await res.json().catch(() => undefined);
         setDeleteError(data?.error ?? "Failed to delete map.");

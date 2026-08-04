@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Alert, Button } from "@mui/material";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface ActiveRoom {
   roomId: string;
@@ -12,7 +13,7 @@ const RejoinBanner: React.FC = () => {
   const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
 
   useEffect(() => {
-    fetch("/api/game/active")
+    apiFetch("/api/game/active")
       .then((res) => (res.status === 204 ? null : res.json()))
       .then((data) => setActiveRoom(data ?? null))
       .catch(() => setActiveRoom(null));

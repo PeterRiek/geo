@@ -5,6 +5,7 @@ import { Box } from "@mui/material";
 import { Coords } from "@/types/geo";
 import GameFallback from "@/components/game/game-fallback";
 import PostgameView from "@/components/game/singleplayer/views/postgame-view";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface GuessResult {
   username: string;
@@ -43,7 +44,7 @@ const HistoryDetail: React.FC<{ id: string; username: string }> = ({ id, usernam
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    fetch(`/api/gamesession/${id}`)
+    apiFetch(`/api/gamesession/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error(res.status === 404 ? "Session not found." : "Failed to load session.");
         return res.json();
