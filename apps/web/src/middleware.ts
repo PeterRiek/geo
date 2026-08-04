@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 
-const protectedRoutes = ["/profile", "/game", "/history"];
+const protectedRoutes = ["/profile", "/game", "/history", "/admin"];
 
 interface CanPlayResponse {
   canPlay: boolean;

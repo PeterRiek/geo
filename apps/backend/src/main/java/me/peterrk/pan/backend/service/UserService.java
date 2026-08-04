@@ -1,6 +1,7 @@
 package me.peterrk.pan.backend.service;
 
 import me.peterrk.pan.backend.exception.UsernameAlreadyExistsException;
+import me.peterrk.pan.backend.model.Permission;
 import me.peterrk.pan.backend.model.User;
 import me.peterrk.pan.backend.repository.GameSessionPlayerRepository;
 import me.peterrk.pan.backend.repository.UserRepository;
@@ -13,9 +14,17 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
+
+  // -1 means unlimited. When a user holds permissions from more than one tier (e.g. two
+  // activation keys redeemed), the most permissive one wins.
+  private static final Map<String, Integer> TIER_DAILY_LIMITS = Map.of(
+      "PLAY_UNLIMITED", -1,
+      "PLAY_100_PER_DAY", 100);
 
   private final UserRepository userRepository;
   private final GameSessionPlayerRepository gameSessionPlayerRepository;
@@ -33,10 +42,29 @@ public class UserService {
         .orElseThrow(() -> new UsernameNotFoundException("User not found"));
   }
 
-  private boolean hasPermission(User user, String permissionName) {
-    return user.getRoles().stream()
+  private int resolveMaxGamesPerDay(User user) {
+    Set<String> permissionNames = user.getRoles().stream()
         .flatMap(role -> role.getPermissions().stream())
-        .anyMatch(permission -> permission.getName().equalsIgnoreCase(permissionName));
+        .map(Permission::getName)
+        .collect(Collectors.toSet());
+
+    int max = dailyLimit;
+    boolean hasTier = false;
+    for (Map.Entry<String, Integer> tier : TIER_DAILY_LIMITS.entrySet()) {
+      if (!permissionNames.contains(tier.getKey())) {
+        continue;
+      }
+      int limit = tier.getValue();
+      if (!hasTier) {
+        max = limit;
+        hasTier = true;
+      } else if (limit == -1 || max == -1) {
+        max = -1;
+      } else {
+        max = Math.max(max, limit);
+      }
+    }
+    return max;
   }
 
   public Map<String, Object> getPlayPermissionStatus(User user) {
@@ -45,10 +73,8 @@ public class UserService {
     LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
     int playedToday = gameSessionPlayerRepository.countTodayByUser(user, startOfDay, startOfNextDay);
 
-    boolean hasUnlimitedPlay = hasPermission(user, "PLAY_UNLIMITED");
-
-    int maxGamesPerDay = hasUnlimitedPlay ? -1 : dailyLimit;
-    boolean canPlay = hasUnlimitedPlay || playedToday < maxGamesPerDay;
+    int maxGamesPerDay = resolveMaxGamesPerDay(user);
+    boolean canPlay = maxGamesPerDay == -1 || playedToday < maxGamesPerDay;
 
     Map<String, Object> response = new HashMap<>();
     response.put("canPlay", canPlay);

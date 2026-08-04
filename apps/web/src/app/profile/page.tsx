@@ -24,14 +24,19 @@ import {
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import EditIcon from "@mui/icons-material/Edit";
+import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { logout } from "@/lib/actions/auth";
 import SignOutButton from "@/components/auth/sing-out-button";
 import HistoryList from "@/components/game/history/history-list";
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
 
 interface UserData {
   id: number;
   username: string;
+  roles?: string[];
+  permissions?: string[];
 }
 
 interface CanPlayData {
@@ -56,24 +61,69 @@ const ProfilePage = () => {
   const [usernameSaving, setUsernameSaving] = useState(false);
   const [usernameError, setUsernameError] = useState("");
   const [usernameSaved, setUsernameSaved] = useState(false);
+  const [keyDialogOpen, setKeyDialogOpen] = useState(false);
+  const [keyCode, setKeyCode] = useState("");
+  const [keyActivating, setKeyActivating] = useState(false);
+  const [keyError, setKeyError] = useState("");
+  const [keySuccess, setKeySuccess] = useState("");
+
+  const refreshUser = async () => {
+    const resMe = await fetch("/api/user/me");
+    if (resMe.ok) {
+      const me = await resMe.json();
+      setData(me);
+      setUsername(me.username);
+    }
+
+    const resCanPlay = await fetch("/api/user/can-play");
+    if (resCanPlay.ok) setCanPlay(await resCanPlay.json());
+  };
 
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      const resMe = await fetch("/api/user/me");
-      if (resMe.ok) {
-        const me = await resMe.json();
-        setData(me);
-        setUsername(me.username);
-      }
-
-      const resCanPlay = await fetch("/api/user/can-play");
-      if (resCanPlay.ok) setCanPlay(await resCanPlay.json());
-
+      await refreshUser();
       setLoading(false);
     };
     init();
   }, []);
+
+  const openActivateKey = () => {
+    setKeyCode("");
+    setKeyError("");
+    setKeySuccess("");
+    setKeyDialogOpen(true);
+  };
+
+  const handleActivateKey = async () => {
+    const trimmed = keyCode.trim();
+    if (!trimmed) return;
+
+    setKeyActivating(true);
+    setKeyError("");
+    setKeySuccess("");
+    try {
+      const res = await fetch("/api/user/activate-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: trimmed }),
+      });
+      const body = await res.json().catch(() => undefined);
+
+      if (!res.ok) {
+        setKeyError(body?.error ?? "Failed to activate key.");
+        return;
+      }
+
+      setKeySuccess("Key activated! Your account has been updated.");
+      setKeyCode("");
+      await refreshUser();
+    } catch {
+      setKeyError("Failed to activate key. Check your connection and try again.");
+    } finally {
+      setKeyActivating(false);
+    }
+  };
 
   const openEdit = () => {
     setUsername(data?.username ?? "");
@@ -210,6 +260,18 @@ const ProfilePage = () => {
             <Button onClick={openEdit} startIcon={<EditIcon />}>
               Edit Profile
             </Button>
+            <Button onClick={openActivateKey} startIcon={<VpnKeyIcon />}>
+              Activate Key
+            </Button>
+            {data?.permissions?.includes("MANAGE_KEYS") && (
+              <Button
+                component={Link}
+                href="/admin/keys"
+                startIcon={<AdminPanelSettingsIcon />}
+              >
+                Manage Activation Keys
+              </Button>
+            )}
             <SignOutButton />
           </Stack>
         </Paper>
@@ -259,6 +321,42 @@ const ProfilePage = () => {
             disabled={!username.trim() || username.trim() === data?.username}
           >
             Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={keyDialogOpen} onClose={() => setKeyDialogOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Activate Key</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <DialogContentText>
+              Paste an activation key to redeem a perk on your account.
+            </DialogContentText>
+            <TextField
+              label="Activation key"
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              value={keyCode}
+              onChange={(e) => {
+                setKeyCode(e.target.value);
+                setKeyError("");
+                setKeySuccess("");
+              }}
+              fullWidth
+              autoFocus
+            />
+            {keyError && <Alert severity="error">{keyError}</Alert>}
+            {keySuccess && <Alert severity="success">{keySuccess}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setKeyDialogOpen(false)}>Close</Button>
+          <Button
+            onClick={handleActivateKey}
+            variant="contained"
+            loading={keyActivating}
+            disabled={!keyCode.trim()}
+          >
+            Activate
           </Button>
         </DialogActions>
       </Dialog>

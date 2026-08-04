@@ -10,7 +10,7 @@ cd apps/backend
 ./gradlew bootRun
 ```
 
-Config is read from environment variables, all with defaults suitable for local dev against the Compose Postgres — see `src/main/resources/application.yml`. Notably `JWT_SECRET` (must match whatever mints tokens you're testing with) and `UPLOADS_DIR` (where map coordinate files + preview images are stored, defaults to `./uploads`).
+Config is read from environment variables, all with defaults suitable for local dev against the Compose Postgres — see `src/main/resources/application.yml`. Notably `JWT_SECRET` (must match whatever mints tokens you're testing with), `UPLOADS_DIR` (where map coordinate files + preview images are stored, defaults to `./uploads`), and `ADMIN_PASSWORD` (set it to get an auto-created `ADMIN`-role login — see Roles & activation keys below; leave unset to skip).
 
 ```bash
 ./gradlew test
@@ -40,9 +40,17 @@ exception/    Global error mapping (GlobalExceptionHandler)
 
 Username/password login issues a JWT (`AuthController`, `JwtUtil`); `JwtAuthFilter` validates it on every HTTP request and `JwtHandshakeInterceptor` validates it on the WebSocket handshake (token passed as a `?token=` query param, since browsers can't set headers on a WebSocket upgrade). Sessions are stateless — no server-side session store, `SecurityConfig` sets `SessionCreationPolicy.STATELESS`. Token lifetime is `jwt.expiration-ms` (`JWT_EXPIRATION_MS` env var, default 24h).
 
-Authorization beyond "logged in" is role/permission based (`Role`, `Permission`, `MethodSecurityConfig`), checked with `@PreAuthorize` — e.g. `MANAGE_MAPS` gates map upload, `READ_USER` gates the user list.
+Authorization beyond "logged in" is role/permission based (`Role`, `Permission`, `MethodSecurityConfig`), checked with `@PreAuthorize` — e.g. `MANAGE_MAPS` gates map upload, `READ_USER` gates the user list, `MANAGE_KEYS` gates the activation-key admin endpoints.
 
 `/api/auth/**`, `/api/status`, `/ws/**`, and `/uploads/images/**` are the only routes that don't require a token (`SecurityConfig`).
+
+## Roles, permissions & activation keys
+
+`RoleSeeder` (`@Order(1)`) runs on every startup and idempotently ensures a fixed set of permissions/roles exist by name — `PLAY_UNLIMITED`, `PLAY_100_PER_DAY`, `MANAGE_KEYS`, `READ_USER` as permissions; `ADMIN`, `VIP_100`, `VIP_UNLIMITED` as roles bundling them. It only ever finds-or-creates; it never edits or deletes a role/permission an operator set up by hand. `AdminUserSeeder` (`@Order(2)`, runs after) then creates an `ADMIN`-role user named `ADMIN_USERNAME` (default `admin`) with password `ADMIN_PASSWORD` — skipped entirely if `ADMIN_PASSWORD` is unset, or if that username already exists (it never overwrites an existing account).
+
+Daily play quotas are resolved from tier permissions (`UserService#resolveMaxGamesPerDay`): `PLAY_UNLIMITED` → unlimited, `PLAY_100_PER_DAY` → 100/day, falling back to `app.game.daily-limit` when a user holds neither. When a user holds more than one tier, the most permissive wins.
+
+An `ActivationKey` (`ActivationKeyService`) is a random code (`XXXX-XXXX-XXXX-XXXX`) tied to a role, a `maxUses` count, and an optional expiry. `POST /api/user/activate-key` lets any authenticated user redeem one — validated against revoked/expired/exhausted/already-redeemed-by-this-user, then the role is added to the caller and an `ActivationKeyRedemption` row is recorded (unique per key+user, so a multi-use key can't be redeemed twice by the same person). `AdminController` (`MANAGE_KEYS`) generates, lists, and revokes keys.
 
 ## Game engine
 
@@ -91,6 +99,11 @@ The boundary-scale suggestion (`GameMapService#boundingBoxMaxErrorDistanceKm`) �
 | `GET /api/user/me` | Current user profile |
 | `GET /api/user/can-play` | Daily play-limit check, used by the frontend's `/game/play` middleware gate. Cap is `app.game.daily-limit` (`DAILY_GAME_LIMIT` env var, default 5) and counts singleplayer and multiplayer sessions together, per participant — not just whoever created a duel room |
 | `GET /api/user/list` | Requires `READ_USER` |
+| `POST /api/user/activate-key` | Redeem an activation key code, granting the caller its role |
+| `GET /api/admin/roles` | List roles + their permissions, requires `MANAGE_KEYS` |
+| `POST /api/admin/keys` | Generate an activation key (`roleId`, `maxUses`, optional `expiresAt`), requires `MANAGE_KEYS` |
+| `GET /api/admin/keys` | List all activation keys, requires `MANAGE_KEYS` |
+| `DELETE /api/admin/keys/{id}` | Revoke an activation key, requires `MANAGE_KEYS` |
 | `GET /api/gamemap`, `/{id}`, `/{id}/locations`, `/{id}/locations/random` | Map metadata + coordinate lookup |
 | `POST /api/gamemap` | Upload a map, requires `MANAGE_MAPS` |
 | `PATCH /api/gamemap/{id}`, `DELETE /api/gamemap/{id}` | Edit/delete a map — owner or `MANAGE_MAPS` only |
