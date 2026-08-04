@@ -78,6 +78,10 @@ A `GameMap` is a name + preview image + a server-side coordinates file (list of 
 
 The `uploads/` directory (`coordinates/` + `images/` subfolders) is a Docker volume mount in production (see root README) — the Dockerfile pre-creates it owned by the non-root `spring` user so the volume comes up writable.
 
+Per-user favorites live in a separate `favorite_maps` join table (`FavoriteMap`, plain `userId`/`mapId` columns — no FK constraints, mirroring `GameSession#mapId`) rather than a `@ManyToMany` on `User`/`GameMap`, so favoriting never touches either entity. `GameMapService#deleteMap` explicitly purges a map's favorite rows on delete, since there's no DB-level cascade to rely on.
+
+The boundary-scale suggestion (`GameMapService#boundingBoxMaxErrorDistanceKm`) — the haversine distance across a map's coordinate bounding box — can be computed either from a freshly-picked file before upload, or, for a map that already exists, from its stored coordinates (`GET /api/gamemap/{id}/calculate-max-distance`, used by the edit dialog's "Calculate" button).
+
 ## REST endpoints
 
 | Path | Notes |
@@ -89,6 +93,10 @@ The `uploads/` directory (`coordinates/` + `images/` subfolders) is a Docker vol
 | `GET /api/user/list` | Requires `READ_USER` |
 | `GET /api/gamemap`, `/{id}`, `/{id}/locations`, `/{id}/locations/random` | Map metadata + coordinate lookup |
 | `POST /api/gamemap` | Upload a map, requires `MANAGE_MAPS` |
+| `PATCH /api/gamemap/{id}`, `DELETE /api/gamemap/{id}` | Edit/delete a map — owner or `MANAGE_MAPS` only |
+| `PUT /api/gamemap/{id}/favorite`, `DELETE /api/gamemap/{id}/favorite` | Favorite/unfavorite a map for the caller |
+| `POST /api/gamemap/calculate-max-distance` | Suggest a boundary scale for a not-yet-uploaded coordinates file |
+| `GET /api/gamemap/{id}/calculate-max-distance` | Same suggestion, recomputed from an already-uploaded map's stored coordinates |
 | `GET /api/game/active` | The in-progress room the caller belongs to, if any — powers the reconnect banner |
 | `GET /api/gamesession/history` | Paginated past-session summaries for the caller |
 | `GET /api/gamesession/{id}` | Full round-by-round detail for one session (must be a participant) |

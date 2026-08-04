@@ -6,9 +6,9 @@ A self-hosted geography guessing game: you're dropped into a Google Street View 
 
 - **Singleplayer** — pick a map and round count, guess your way through a set of locations, see your score per round and total at the end.
 - **Multiplayer duels** — create a room (with a shareable invite link) or join one with a code, and play the same rounds head-to-head over WebSockets.
-- **Custom maps** — maps are defined server-side and selectable from the game menu; not locked to the whole world.
+- **Custom maps** — maps are defined server-side and selectable from the game menu; not locked to the whole world. Favorite the ones you play most for quick access, and recalculate a map's boundary scale after upload if its coordinates change.
 - **NMPZ-style settings** — toggle move/pan/zoom independently per game.
-- **Accounts & daily play limits** — username/password auth (JWT-based), with a configurable per-day game cap.
+- **Accounts & daily play limits** — username/password auth (JWT-based), with a configurable per-day game cap. The homepage surfaces an "Explore maps" suggestion instead of "Jump back in" once you're out of games for the day, or before you've played your first one.
 - **Light/dark mode**.
 
 ## Tech stack

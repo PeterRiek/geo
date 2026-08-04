@@ -44,6 +44,7 @@ src/middleware.ts     Route guarding + backend health/play-limit gating (see abo
 
 ### Pages worth knowing
 
+- `app/page.tsx` — the homepage. Server-rendered: fetches `/user/can-play` and recent session history directly (not through the proxy layer) to decide what to show — "Jump back in" (replay your most-played recent map) when there's a recent session and games remain today, an "Explore maps" card (same layout, sized to match) otherwise — either for a new player with no history yet, or once today's play limit is hit, which also grays out the main Play button.
 - `game/page.tsx` — the game menu (map/mode/settings selection), see `components/game/game-menu.tsx` and `components/game/menu/*`.
 - `game/play/sp` / `game/play/mp` — singleplayer and multiplayer game screens; both are thin wrappers around `components/game/singleplayer/singleplayer-game.tsx` / `components/game/multiplayer/mutliplayer-game.tsx`, which share `lib/hooks/use-game-socket.ts` for the WebSocket connection.
 - `game/maps/upload` — map upload form (`components/game/menu/UploadMapForm.tsx`). The page itself fetches `/api/user/me` server-side and renders a fallback instead of the form unless the user has the backend's `MANAGE_MAPS` permission — the actual upload request is still backend-enforced regardless.
