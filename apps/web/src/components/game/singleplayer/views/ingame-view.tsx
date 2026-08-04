@@ -3,6 +3,7 @@ import GuessrMobileUI from "@/components/game/guessing-ui-mobile";
 import GuessrUI from "@/components/game/guessing-ui";
 import StreetViewPano from "@/components/game/street-view-pano";
 import RoundHud from "@/components/game/round-hud";
+import CountdownOverlay from "@/components/game/countdown-overlay";
 import { Coords } from "@/types/geo";
 
 interface Props {
@@ -47,6 +48,9 @@ const InGameView: React.FC<Props> = ({
       <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
         {round !== undefined && totalRounds !== undefined && (
           <RoundHud round={round} totalRounds={totalRounds} secondsLeft={secondsLeft} />
+        )}
+        {secondsLeft !== undefined && secondsLeft > 0 && secondsLeft <= 5 && (
+          <CountdownOverlay secondsLeft={secondsLeft} />
         )}
         <StreetViewPano
           location={targetLocation}

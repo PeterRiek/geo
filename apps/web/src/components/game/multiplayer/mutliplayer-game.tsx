@@ -30,6 +30,7 @@ import PostgameView from "../singleplayer/views/postgame-view";
 import GameFallback from "@/components/game/game-fallback";
 import ConnectionBanner from "@/components/game/connection-banner";
 import GameSettingsSummary from "@/components/game/game-settings-summary";
+import { buildGameMenuHref } from "@/lib/game-settings-url";
 
 const MIN_PLAYERS_TO_START = 2;
 
@@ -260,6 +261,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
           allTargets={gameState.allTargets}
           allScores={gameState.allScores}
           allDistances={gameState.allDistances}
+          backHref={buildGameMenuHref(gameSettings)}
         />
       );
     } else if (gameState.roomPhase == "WAITING") {
@@ -510,6 +512,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         autoHideDuration={3000}
         onClose={() => setGuessNotification(undefined)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        sx={{ top: { xs: 72, sm: 24 } }}
       >
         <Chip
           label={guessNotification}

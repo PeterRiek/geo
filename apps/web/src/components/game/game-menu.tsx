@@ -201,6 +201,9 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
     if (allowPanParam !== null) setPanEnabled(allowPanParam === "true");
     const allowZoomParam = searchParams.get("allowZoom");
     if (allowZoomParam !== null) setZoomEnabled(allowZoomParam === "true");
+
+    const timePressureParam = searchParams.get("timePressure");
+    if (timePressureParam !== null) setTimePressure(timePressureParam === "true");
   }, [searchParams]);
 
   return (

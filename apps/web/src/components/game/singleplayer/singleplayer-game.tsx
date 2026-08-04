@@ -12,6 +12,7 @@ import GameFallback from "@/components/game/game-fallback";
 import ConnectionBanner from "@/components/game/connection-banner";
 import useGameSocket from "@/lib/hooks/use-game-socket";
 import useCountdown from "@/lib/hooks/use-countdown";
+import { buildGameMenuHref } from "@/lib/game-settings-url";
 
 const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
@@ -129,6 +130,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
           allTargets={gameState.allTargets}
           allScores={gameState.allScores}
           allDistances={gameState.allDistances}
+          backHref={buildGameMenuHref(gameSettings)}
         />
       );
     } else if (
