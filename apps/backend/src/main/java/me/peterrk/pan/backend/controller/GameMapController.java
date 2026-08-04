@@ -46,7 +46,7 @@ public class GameMapController {
   public ResponseEntity<?> getAllGameMaps(Authentication auth) {
     User currentUser = currentUser(auth);
     List<GameMapDto> maps = gameMapService.getVisibleGameMaps(currentUser).stream()
-        .map(m -> new GameMapDto(m, currentUser))
+        .map(m -> new GameMapDto(m, currentUser, gameMapService.resolveLocationCount(m)))
         .toList();
     return ResponseEntity.status(HttpStatus.OK).body(maps);
   }
@@ -57,7 +57,8 @@ public class GameMapController {
     GameMap gameMap = accessibleMap(mapId, currentUser);
     if (gameMap == null)
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
-    return ResponseEntity.status(HttpStatus.OK).body(new GameMapDto(gameMap, currentUser));
+    return ResponseEntity.status(HttpStatus.OK)
+        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap)));
   }
 
   @GetMapping("/{id}/locations")
@@ -102,7 +103,20 @@ public class GameMapController {
     User currentUser = currentUser(auth);
     GameMap gameMap = gameMapService.uploadMap(name, coordinatesFile, imageFile, currentUser, isPublic,
         maxErrorDistanceKm, description);
-    return ResponseEntity.status(HttpStatus.CREATED).body(new GameMapDto(gameMap, currentUser));
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap)));
+  }
+
+  public record MaxDistanceResponse(double maxErrorDistanceKm) {
+  }
+
+  // Standalone calculation — doesn't require the map to exist yet, just a coordinates file
+  // freshly picked in the upload form. Same exception-propagation convention as uploadMap above.
+  @PostMapping("/calculate-max-distance")
+  public ResponseEntity<?> calculateMaxDistance(@RequestParam("coordinates") MultipartFile coordinatesFile)
+      throws IOException {
+    double km = gameMapService.calculateMaxErrorDistanceKm(coordinatesFile);
+    return ResponseEntity.ok(new MaxDistanceResponse(km));
   }
 
   // Explicit @JsonProperty on the boolean component: Jackson's is-stripping convention for
@@ -120,7 +134,7 @@ public class GameMapController {
         body.description(), currentUser, isAdmin(auth));
     if (gameMap == null)
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
-    return ResponseEntity.ok(new GameMapDto(gameMap, currentUser));
+    return ResponseEntity.ok(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap)));
   }
 
   @DeleteMapping("/{id}")

@@ -6,20 +6,78 @@ import {
   Box,
   Button,
   Container,
+  FormControlLabel,
   IconButton,
   InputAdornment,
   Paper,
+  Popover,
   Snackbar,
+  Stack,
+  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
+  Typography,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import LoginIcon from "@mui/icons-material/Login";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import SettingsIcon from "@mui/icons-material/Settings";
 import SelectedMapSummary from "./SelectedMapSummary";
 import NMPZSelect from "./NMPZSelect";
+
+// Matches the Rounds/Time buttons in NMPZSelect (same button styling, same button+Popover
+// pattern) so multiplayer-only settings read as part of the same settings row.
+const TimePressureButton: React.FC<{
+  timePressure: boolean;
+  setTimePressure: (val: boolean) => void;
+}> = ({ timePressure, setTimePressure }) => {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+
+  return (
+    <>
+      <Button
+        variant="outlined"
+        color={timePressure ? "primary" : undefined}
+        startIcon={<SettingsIcon />}
+        onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{
+          minWidth: 0,
+          height: 36.5,
+          px: { xs: 1.5, sm: 2 },
+          "& .MuiButton-startIcon": { mx: { xs: 0, sm: undefined } },
+        }}
+      >
+        <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+          Settings
+        </Box>
+      </Button>
+      <Popover
+        open={!!anchor}
+        anchorEl={anchor}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        transformOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Stack spacing={1} sx={{ p: 2, width: 260 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={timePressure}
+                onChange={(e) => setTimePressure(e.target.checked)}
+              />
+            }
+            label="Time pressure"
+          />
+          <Typography variant="body2" color="text.secondary">
+            When on, a guess clamps everyone&apos;s remaining time down to 10s.
+          </Typography>
+        </Stack>
+      </Popover>
+    </>
+  );
+};
 
 // eslint-disable-next-line
 const MultiplayerSettings: React.FC<any> = ({
@@ -43,6 +101,8 @@ const MultiplayerSettings: React.FC<any> = ({
   setRoundCount,
   roundTimeLimitSeconds,
   setRoundTimeLimitSeconds,
+  timePressure,
+  setTimePressure,
 }) => {
   const [linkCopied, setLinkCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
@@ -159,6 +219,12 @@ const MultiplayerSettings: React.FC<any> = ({
               setZoomEnabled={setZoomEnabled}
               setRoundCount={setRoundCount}
               setRoundTimeLimitSeconds={setRoundTimeLimitSeconds}
+              extraControls={
+                <TimePressureButton
+                  timePressure={timePressure}
+                  setTimePressure={setTimePressure}
+                />
+              }
             />
           </Paper>
           <Paper sx={{ p: 1 }}>
@@ -200,6 +266,7 @@ const MultiplayerSettings: React.FC<any> = ({
                 roundCount: roundCount,
                 roundTimeLimitSeconds: roundTimeLimitSeconds,
                 gameMode: "MULTIPLAYER",
+                timePressure: timePressure,
               });
             }}
             variant="contained"

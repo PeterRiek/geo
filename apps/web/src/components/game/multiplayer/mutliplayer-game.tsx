@@ -43,12 +43,20 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const roomId = useMemo(() => searchParams.get("roomId"), [searchParams]);
   // load searchparam.roomId into useMultiplaerSocker
 
-  const { gameState, connectionStatus, join, startGame, nextRound, submitGuess, reconnect } =
-    useGameSocket(roomId ?? "default", accessToken);
+  const { gameState, connectionStatus, join, setReady, submitGuess, reconnect } = useGameSocket(
+    roomId ?? "default",
+    accessToken
+  );
 
   const secondsLeft = useCountdown(
     gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined
   );
+  const readySecondsLeft = useCountdown(
+    gameState?.roomPhase === "WAITING" || gameState?.roomPhase === "ROUND_RESULTS"
+      ? gameState.readyDeadline
+      : undefined
+  );
+  const amReady = gameState?.readyPlayers?.includes(username) ?? false;
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -163,10 +171,6 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secondsLeft]);
 
-  const start = () => {
-    startGame();
-  };
-
   const copyWithFallback = (text: string): boolean => {
     const textarea = document.createElement("textarea");
     textarea.value = text;
@@ -198,10 +202,6 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
     } else {
       setCopyError(true);
     }
-  };
-
-  const next = () => {
-    nextRound();
   };
 
   let content: React.ReactNode;
@@ -265,7 +265,9 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
     } else if (gameState.roomPhase == "WAITING") {
       phaseKey = "waiting";
       const playerCount = gameState.players?.length ?? 0;
-      const notEnoughPlayers = playerCount < MIN_PLAYERS_TO_START;
+      const connectedCount = playerCount - (gameState.disconnectedPlayers?.length ?? 0);
+      const readyCount = gameState.readyPlayers?.length ?? 0;
+      const notEnoughPlayers = connectedCount < MIN_PLAYERS_TO_START;
 
       content = (
         <Box
@@ -317,14 +319,23 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {gameState.players?.map((player) => {
                 const disconnected = gameState.disconnectedPlayers?.includes(player);
+                const ready = gameState.readyPlayers?.includes(player);
                 return (
                   <Chip
                     key={player}
                     label={
                       (player === username ? `${player} (you)` : player) +
-                      (disconnected ? " – disconnected" : "")
+                      (disconnected ? " – disconnected" : ready ? " – ready" : "")
                     }
-                    color={player === username ? "primary" : "default"}
+                    color={
+                      disconnected
+                        ? "default"
+                        : ready
+                          ? "success"
+                          : player === username
+                            ? "primary"
+                            : "default"
+                    }
                     sx={disconnected ? { opacity: 0.5 } : undefined}
                   />
                 );
@@ -341,18 +352,24 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
               Back
             </Button>
             <Button
-              onClick={() => start()}
-              variant="contained"
+              onClick={() => setReady(!amReady)}
+              variant={amReady ? "outlined" : "contained"}
               size="large"
               disabled={notEnoughPlayers}
             >
-              Start Game
+              {amReady ? `Not ready (${readyCount}/${connectedCount})` : "Ready"}
             </Button>
           </Stack>
-          {notEnoughPlayers && (
+          {notEnoughPlayers ? (
             <Typography variant="body2" color="text.secondary">
               Need at least {MIN_PLAYERS_TO_START} players to start
             </Typography>
+          ) : (
+            readySecondsLeft !== undefined && (
+              <Typography variant="body2" color="text.secondary">
+                Auto-starting in {readySecondsLeft}s if not everyone is ready
+              </Typography>
+            )
           )}
         </Box>
       );
@@ -421,8 +438,16 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         .map((player) => ({
           player,
           score: gameState.allScores[gameState.roundCount]?.[player] ?? 0,
+          // Cumulative across every round played so far (including this one), not just this round.
+          totalScore: gameState.allScores
+            .slice(0, gameState.roundCount + 1)
+            .reduce((sum, roundScores) => sum + (roundScores?.[player] ?? 0), 0),
         }))
         .sort((a, b) => b.score - a.score);
+
+      const resultsConnectedCount =
+        (gameState.players?.length ?? 0) - (gameState.disconnectedPlayers?.length ?? 0);
+      const resultsReadyCount = gameState.readyPlayers?.length ?? 0;
 
       content = (
         <RoundResultView
@@ -433,10 +458,16 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
           otherGuessLocations={otherGuesses}
           center={center}
           zoom={zoom}
-          onNext={next}
+          onNext={() => setReady(!amReady)}
           username={username}
           standings={roundStandings}
           isFinalRound={gameState.roundCount >= gameSettings.roundCount - 1}
+          readyState={{
+            amReady,
+            readyCount: resultsReadyCount,
+            totalCount: resultsConnectedCount,
+          }}
+          readySecondsLeft={readySecondsLeft}
         />
       );
     } else {

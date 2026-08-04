@@ -69,7 +69,11 @@ const PostgameView: React.FC<Props> = ({
   const roundStandings = useMemo(() => {
     if (round === undefined) return [];
     return players
-      .map((player) => ({ player, score: scoresByPlayer[player]?.[round] ?? 0 }))
+      .map((player) => ({
+        player,
+        score: scoresByPlayer[player]?.[round] ?? 0,
+        totalScore: (scoresByPlayer[player] ?? []).slice(0, round + 1).reduce((sum, s) => sum + s, 0),
+      }))
       .sort((a, b) => b.score - a.score);
   }, [players, scoresByPlayer, round]);
 

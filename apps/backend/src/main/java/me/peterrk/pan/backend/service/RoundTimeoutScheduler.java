@@ -22,4 +22,12 @@ public class RoundTimeoutScheduler {
   public void checkExpiredRounds() {
     gameService.resolveExpiredRounds();
   }
+
+  // Failsafe for the multiplayer ready-check gates (pre-round-1 lobby and between-rounds) —
+  // force-advances a room whose gate has been open past its deadline. See
+  // GameService#resolveExpiredReadyChecks.
+  @Scheduled(fixedDelay = 1000)
+  public void checkExpiredReadyChecks() {
+    gameService.resolveExpiredReadyChecks();
+  }
 }

@@ -15,6 +15,7 @@ type Map = {
   description?: string;
   maxErrorDistanceKm?: number;
   ownerUsername?: string;
+  locationCount?: number;
 };
 
 // Placeholder copy for maps that haven't been given a description yet.
@@ -76,7 +77,7 @@ const SelectedMapSummary: React.FC<{
 
   const description =
     map.description || DESCRIPTIONS[seededInt(map.id, 0, DESCRIPTIONS.length - 1)];
-  const locationCount = seededInt(map.id, 25, 150);
+  const locationCount = map.locationCount ?? 0;
 
   return (
     <Box sx={{ position: "relative", display: "flex", width: "100%", height: SUMMARY_HEIGHT }}>

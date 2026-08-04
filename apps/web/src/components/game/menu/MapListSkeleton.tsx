@@ -1,30 +1,20 @@
-import { Box, Skeleton } from "@mui/material";
+import { Box, Paper, Skeleton, Stack } from "@mui/material";
 
 const SKELETON_ROWS = 4;
 
+// Mirrors MapsLibrary's actual map row exactly (Paper, not a bordered Box — MapsLibrary's rows
+// have no border, just Paper's default elevation shadow) so the loading state doesn't visibly
+// jump/shift once the real rows swap in.
 const MapListSkeleton: React.FC = () => (
-  <Box
-    sx={{
-      display: "flex",
-      flexDirection: "column",
-      overflowY: "auto",
-      maxHeight: "100%",
-      width: "100%",
-      gap: 1,
-      boxSizing: "border-box",
-    }}
-  >
+  <Stack spacing={1}>
     {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-      <Box
+      <Paper
         key={i}
         sx={{
           display: "flex",
           alignItems: "center",
           gap: 2,
           p: 1,
-          borderRadius: 1,
-          border: "1px solid",
-          borderColor: "divider",
         }}
       >
         <Skeleton
@@ -38,9 +28,9 @@ const MapListSkeleton: React.FC = () => (
           <Skeleton variant="text" width="90%" />
           <Skeleton variant="text" width="70%" />
         </Box>
-      </Box>
+      </Paper>
     ))}
-  </Box>
+  </Stack>
 );
 
 export default MapListSkeleton;

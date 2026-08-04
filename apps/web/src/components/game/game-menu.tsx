@@ -18,6 +18,7 @@ interface RoomSettings {
   roundCount: number;
   roundTimeLimitSeconds: number;
   gameMode: "SINGLEPLAYER" | "MULTIPLAYER";
+  timePressure?: boolean;
 }
 
 const CREATE_ROOM_TIMEOUT_MS = 10_000;
@@ -35,6 +36,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
       description?: string;
       maxErrorDistanceKm?: number;
       ownerUsername?: string;
+      locationCount?: number;
     }[]
   >([]);
   const [mapsLoading, setMapsLoading] = useState(true);
@@ -49,6 +51,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   const [zoomEnabled, setZoomEnabled] = useState(true);
   const [roundCount, setRoundCount] = useState(5);
   const [roundTimeLimitSeconds, setRoundTimeLimitSeconds] = useState(60);
+  const [timePressure, setTimePressure] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [connectionError, setConnectionError] = useState<string>();
   const [pendingMode, setPendingMode] = useState<"singleplayer" | "multiplayer">();
@@ -156,6 +159,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
           description: m.description,
           maxErrorDistanceKm: m.maxErrorDistanceKm,
           ownerUsername: m.ownerUsername,
+          locationCount: m.locationCount,
         }))
       );
       setMapsLoading(false);
@@ -165,11 +169,36 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
 
   useEffect(() => {
     const mapIdParam = searchParams.get("mapId");
-    if (!mapIdParam) return;
-    const mapId = Number(mapIdParam);
-    if (Number.isFinite(mapId)) {
-      setSelectedMap(mapId);
+    if (mapIdParam) {
+      const mapId = Number(mapIdParam);
+      if (Number.isFinite(mapId)) setSelectedMap(mapId);
     }
+
+    const modeParam = searchParams.get("mode");
+    if (modeParam === "singleplayer" || modeParam === "multiplayer") {
+      setMode(modeParam);
+      // They're relaunching settings into a fresh room, not rejoining the old (finished) one.
+      if (modeParam === "multiplayer") setMultiplayer("create");
+    }
+
+    const roundCountParam = searchParams.get("roundCount");
+    if (roundCountParam) {
+      const n = Number(roundCountParam);
+      if (Number.isFinite(n)) setRoundCount(n);
+    }
+
+    const roundTimeLimitParam = searchParams.get("roundTimeLimitSeconds");
+    if (roundTimeLimitParam) {
+      const n = Number(roundTimeLimitParam);
+      if (Number.isFinite(n)) setRoundTimeLimitSeconds(n);
+    }
+
+    const allowMoveParam = searchParams.get("allowMove");
+    if (allowMoveParam !== null) setMoveEnabled(allowMoveParam === "true");
+    const allowPanParam = searchParams.get("allowPan");
+    if (allowPanParam !== null) setPanEnabled(allowPanParam === "true");
+    const allowZoomParam = searchParams.get("allowZoom");
+    if (allowZoomParam !== null) setZoomEnabled(allowZoomParam === "true");
   }, [searchParams]);
 
   return (
@@ -232,6 +261,8 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
             setRoundCount,
             roundTimeLimitSeconds,
             setRoundTimeLimitSeconds,
+            timePressure,
+            setTimePressure,
           }}
         />
       )}

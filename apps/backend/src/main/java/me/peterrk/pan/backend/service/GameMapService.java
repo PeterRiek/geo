@@ -27,6 +27,7 @@ import me.peterrk.pan.backend.dto.ws.LatLng;
 import me.peterrk.pan.backend.model.GameMap;
 import me.peterrk.pan.backend.model.User;
 import me.peterrk.pan.backend.repository.GameMapRepository;
+import me.peterrk.pan.backend.util.GeoUtils;
 
 @Service
 public class GameMapService {
@@ -141,7 +142,7 @@ public class GameMapService {
     String trimmedDescription = validateDescription(description);
 
     byte[] coordinatesBytes = coordinatesFile.getBytes();
-    validateCoordinates(coordinatesBytes);
+    List<LatLng> coordinates = validateCoordinates(coordinatesBytes);
 
     byte[] imageBytes = validateImage(imageFile);
     String imageExtension = ALLOWED_IMAGE_TYPES.get(imageFile.getContentType());
@@ -166,12 +167,60 @@ public class GameMapService {
       gameMap.setIsPublic(isPublic);
       gameMap.setMaxErrorDistanceKm(maxErrorDistanceKm);
       gameMap.setDescription(trimmedDescription);
+      gameMap.setLocationCount(coordinates.size());
       return gameMapRepository.save(gameMap);
     } catch (Exception e) {
       Files.deleteIfExists(coordinatesPath);
       Files.deleteIfExists(imagePath);
       throw e;
     }
+  }
+
+  /**
+   * Returns this map's cached location count, computing and persisting it once for legacy rows
+   * that predate the locationCount column. A transient read/parse failure (getCustomCoordinates
+   * swallows all exceptions into an empty list) returns 0 for this call without persisting, so a
+   * later read retries the parse instead of permanently caching a wrong 0 — uploadMap's
+   * validateCoordinates already rejects genuinely-empty coordinate files at write time, so a real
+   * map should never legitimately resolve to 0.
+   */
+  public int resolveLocationCount(GameMap map) {
+    if (map.getLocationCount() != null) {
+      return map.getLocationCount();
+    }
+    List<LatLng> coordinates = getCustomCoordinates(map.getId());
+    if (coordinates.isEmpty()) {
+      return 0;
+    }
+    int count = coordinates.size();
+    map.setLocationCount(count);
+    gameMapRepository.save(map);
+    return count;
+  }
+
+  /**
+   * Suggests a maxErrorDistanceKm for a not-yet-uploaded coordinates file: the haversine distance
+   * between the NE and SW corners of the coordinates' bounding box. Doesn't touch the DB or
+   * require a map to exist yet — reuses the same validation uploadMap applies (size/range limits).
+   * Throws IllegalArgumentException for validation failures, IOException for unreadable JSON.
+   */
+  public double calculateMaxErrorDistanceKm(MultipartFile coordinatesFile) throws IOException {
+    if (coordinatesFile == null || coordinatesFile.isEmpty()) {
+      throw new IllegalArgumentException("A coordinates JSON file is required");
+    }
+    List<LatLng> coordinates = validateCoordinates(coordinatesFile.getBytes());
+
+    double minLat = Double.MAX_VALUE;
+    double maxLat = -Double.MAX_VALUE;
+    double minLng = Double.MAX_VALUE;
+    double maxLng = -Double.MAX_VALUE;
+    for (LatLng c : coordinates) {
+      minLat = Math.min(minLat, c.lat);
+      maxLat = Math.max(maxLat, c.lat);
+      minLng = Math.min(minLng, c.lng);
+      maxLng = Math.max(maxLng, c.lng);
+    }
+    return GeoUtils.distanceKm(new LatLng(minLat, minLng), new LatLng(maxLat, maxLng));
   }
 
   /**

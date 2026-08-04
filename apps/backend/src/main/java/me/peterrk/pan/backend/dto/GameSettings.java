@@ -15,4 +15,7 @@ public class GameSettings {
   public int roundCount;
   public int roundTimeLimitSeconds;
   public GameMode gameMode;
+  // Multiplayer-only opt-in: a guess clamps everyone's remaining round time down to 10s if it's
+  // currently more (or unlimited). Never extends the deadline. See GameService#applyTimePressure.
+  public boolean timePressure;
 }
