@@ -28,7 +28,7 @@ There's no automated frontend test suite currently — `npm run lint` is the onl
 `src/auth.ts` configures NextAuth v5 with a `CredentialsProvider` that calls the backend's `/api/auth/login` and stores the returned JWT as `session.accessToken` (JWT session strategy — no NextAuth database). Server Components, Route Handlers, and Server Actions read the session via `auth()`; that token is then forwarded as `Authorization: Bearer <token>` when proxying to the backend.
 
 `src/middleware.ts` runs on every request and does three things, in order:
-1. Redirects unauthenticated requests to `/profile`, `/game`, `/history` back to `/`.
+1. Redirects unauthenticated requests to `/profile`, `/game`, `/history`, `/admin` back to `/`.
 2. Pings `GET /api/status` on the backend (5s cache) to catch a cold-starting or unreachable backend, redirecting to `/server-starting` or `/error` rather than letting pages fail individually — `/server-starting`, `/error`, `/session-expired`, and `/limit-reached` are exempted from this check themselves, to avoid a redirect loop.
 3. For `/game/play/**` specifically, calls `/api/user/can-play` (daily game cap) and redirects to `/session-expired` or `/limit-reached` as appropriate.
 
@@ -49,6 +49,8 @@ src/middleware.ts     Route guarding + backend health/play-limit gating (see abo
 - `game/play/sp` / `game/play/mp` — singleplayer and multiplayer game screens; both are thin wrappers around `components/game/singleplayer/singleplayer-game.tsx` / `components/game/multiplayer/mutliplayer-game.tsx`, which share `lib/hooks/use-game-socket.ts` for the WebSocket connection.
 - `game/maps/upload` — map upload form (`components/game/menu/UploadMapForm.tsx`). The page itself fetches `/api/user/me` server-side and renders a fallback instead of the form unless the user has the backend's `MANAGE_MAPS` permission — the actual upload request is still backend-enforced regardless.
 - `history`, `history/[id]` — past session list and round-by-round detail, backed by `/api/gamesession/history` and `/api/gamesession/[id]`.
+- `profile` — also has an "Activate Key" dialog (`POST /api/user/activate-key`) for redeeming an activation key code, and a "Manage Activation Keys" link to `admin/keys` shown only when the fetched `/api/user/me` permissions include `MANAGE_KEYS`.
+- `admin/keys` — activation-key admin panel: generate a key for a role (with max-uses/expiry), copy it, and revoke existing ones. Client-side redirects to `/profile` if the caller lacks `MANAGE_KEYS` (UX only — `AdminController` on the backend is the real boundary), backed by `/api/admin/roles` and `/api/admin/keys`.
 - `server-starting`, `error`, `session-expired`, `limit-reached` — middleware bail-out destinations, not organically navigated to.
 
 ### The WebSocket hook

@@ -9,6 +9,7 @@ A self-hosted geography guessing game: you're dropped into a Google Street View 
 - **Custom maps** — maps are defined server-side and selectable from the game menu; not locked to the whole world. Favorite the ones you play most for quick access, and recalculate a map's boundary scale after upload if its coordinates change.
 - **NMPZ-style settings** — toggle move/pan/zoom independently per game.
 - **Accounts & daily play limits** — username/password auth (JWT-based), with a configurable per-day game cap. The homepage surfaces an "Explore maps" suggestion instead of "Jump back in" once you're out of games for the day, or before you've played your first one.
+- **Roles, permissions & activation keys** — a role/permission system (e.g. `PLAY_UNLIMITED`, `PLAY_100_PER_DAY`) gates perks and admin actions. Admins (`MANAGE_KEYS` permission) generate redeemable activation keys from `/admin/keys`, tied to a role, a max-use count, and an optional expiry; players redeem one from `/profile` to raise their daily game cap or unlock other perks. An `admin` account with the `ADMIN` role is auto-created on first startup from `ADMIN_USERNAME`/`ADMIN_PASSWORD`.
 - **Light/dark mode**.
 
 ## Tech stack
@@ -58,6 +59,7 @@ All variables live in one `.env` at the repo root, consumed by `docker-compose.y
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | postgres, backend | Standard Postgres credentials. |
 | `BACKEND_PORT` / `WEB_PORT` | host | Host-side port mapping only. Container-internal ports stay `8080`/`3000`. |
 | `JWT_SECRET` | backend | Signs auth tokens. Generate with `openssl rand -base64 48`. |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | backend | Bootstraps an admin account (`ADMIN` role) on first startup — skipped if a user with that username already exists, so changing `ADMIN_PASSWORD` later has no effect. `ADMIN_USERNAME` defaults to `admin`; `ADMIN_PASSWORD` is required. |
 | `IMAGE_NAME` | web, backend | GHCR namespace, e.g. `peterriek/geoguessr-clone`. Images are pulled as `ghcr.io/<IMAGE_NAME>-backend` / `ghcr.io/<IMAGE_NAME>-web` — must match the `IMAGE_NAME` variable set on the `prd` GitHub environment. |
 | `NEXTAUTH_SECRET` | web | Encrypts NextAuth session tokens. Generate with `openssl rand -base64 48`. |
 | `NEXTAUTH_URL` | web | The public URL of the site, e.g. `https://your-domain`. |
@@ -71,7 +73,7 @@ All variables live in one `.env` at the repo root, consumed by `docker-compose.y
 ```bash
 docker compose up -d postgres
 cd apps/backend
-./gradlew bootRun
+ADMIN_PASSWORD=changeme ./gradlew bootRun # omit to skip admin user bootstrap
 ```
 
 ```bash
