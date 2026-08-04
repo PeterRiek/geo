@@ -50,6 +50,11 @@ public class GlobalExceptionHandler {
     return error(HttpStatus.CONFLICT, e.getMessage());
   }
 
+  @ExceptionHandler(InvalidActivationKeyException.class)
+  public ResponseEntity<Map<String, String>> handleInvalidActivationKey(InvalidActivationKeyException e) {
+    return error(HttpStatus.BAD_REQUEST, e.getMessage());
+  }
+
   @ExceptionHandler(UsernameNotFoundException.class)
   public ResponseEntity<Map<String, String>> handleNotFound(UsernameNotFoundException e) {
     return error(HttpStatus.NOT_FOUND, e.getMessage());
