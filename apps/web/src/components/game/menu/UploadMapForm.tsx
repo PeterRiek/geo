@@ -229,14 +229,22 @@ const UploadMapForm: React.FC = () => {
           {success && (
             <Alert severity="success" action={
               <Button color="inherit" size="small" onClick={() => router.push("/game/maps")}>
-                Go play
+                View all maps
               </Button>
             }>
               Map uploaded!
             </Alert>
           )}
 
-          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+            <Button
+              variant="outlined"
+              size="large"
+              disabled={submitting}
+              onClick={() => router.push("/game/maps")}
+            >
+              Cancel
+            </Button>
             <Button type="submit" variant="contained" size="large" disabled={!canSubmit} loading={submitting}>
               Upload
             </Button>

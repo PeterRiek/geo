@@ -20,13 +20,14 @@ public class GameMapDto {
   private final String ownerUsername;
   private final boolean isPublic;
   private final boolean isOwn;
+  private final boolean isFavorite;
   private final double maxErrorDistanceKm;
   private final int locationCount;
 
-  // locationCount is passed in explicitly rather than resolved here — resolving it can require
-  // parsing the coordinates file and persisting a backfilled count, which doesn't belong inside a
-  // DTO constructor. See GameMapService#resolveLocationCount.
-  public GameMapDto(GameMap map, User currentUser, int locationCount) {
+  // locationCount and isFavorite are passed in explicitly rather than resolved here — resolving
+  // them can require parsing the coordinates file / a separate favorites lookup, which doesn't
+  // belong inside a DTO constructor. See GameMapService#resolveLocationCount and #isFavorite.
+  public GameMapDto(GameMap map, User currentUser, int locationCount, boolean isFavorite) {
     this.id = map.getId();
     this.name = map.getName();
     this.imageUrl = map.getImageUrl();
@@ -35,6 +36,7 @@ public class GameMapDto {
     this.isPublic = map.getIsPublic() == null || map.getIsPublic();
     this.isOwn = map.getOwner() != null && currentUser != null
         && map.getOwner().getId().equals(currentUser.getId());
+    this.isFavorite = isFavorite;
     this.maxErrorDistanceKm = map.getMaxErrorDistanceKm() != null
         ? map.getMaxErrorDistanceKm()
         : GeoUtils.DEFAULT_MAX_ERROR_DISTANCE_KM;
@@ -72,6 +74,11 @@ public class GameMapDto {
   @JsonProperty("isOwn")
   public boolean isOwn() {
     return isOwn;
+  }
+
+  @JsonProperty("isFavorite")
+  public boolean isFavorite() {
+    return isFavorite;
   }
 
   public double getMaxErrorDistanceKm() {

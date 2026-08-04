@@ -37,6 +37,8 @@ import PersonIcon from "@mui/icons-material/Person";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import StarIcon from "@mui/icons-material/Star";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { getPublicBackendOrigin } from "@/lib/backend-url";
 import MapListSkeleton from "./MapListSkeleton";
 
@@ -48,6 +50,7 @@ interface GameMap {
   ownerUsername?: string;
   isPublic: boolean;
   isOwn: boolean;
+  isFavorite: boolean;
   maxErrorDistanceKm: number;
 }
 
@@ -59,6 +62,8 @@ interface EditState {
   maxErrorDistanceKm: number;
   submitting: boolean;
   error?: string;
+  calculating?: boolean;
+  calculateError?: string;
 }
 
 type MapCategory = "official" | "yours" | "community";
@@ -75,6 +80,7 @@ const MapsLibrary: React.FC = () => {
     yours: true,
     community: true,
   });
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [loadError, setLoadError] = useState<string>();
@@ -103,11 +109,34 @@ const MapsLibrary: React.FC = () => {
     router.push(`/game?mapId=${id}`);
   };
 
-  const filteredMaps = maps?.filter(
-    (map) =>
-      map.name.toLowerCase().includes(search.trim().toLowerCase()) &&
-      filters[mapCategory(map)]
-  );
+  const toggleFavorite = async (map: GameMap, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextFavorite = !map.isFavorite;
+    setMaps((prev) =>
+      prev?.map((m) => (m.id === map.id ? { ...m, isFavorite: nextFavorite } : m))
+    );
+    try {
+      const res = await fetch(`/api/gamemap/${map.id}/favorite`, {
+        method: nextFavorite ? "PUT" : "DELETE",
+      });
+      if (!res.ok && res.status !== 204) {
+        throw new Error("Failed to update favorite");
+      }
+    } catch {
+      setMaps((prev) =>
+        prev?.map((m) => (m.id === map.id ? { ...m, isFavorite: map.isFavorite } : m))
+      );
+    }
+  };
+
+  const filteredMaps = maps
+    ?.filter(
+      (map) =>
+        map.name.toLowerCase().includes(search.trim().toLowerCase()) &&
+        filters[mapCategory(map)] &&
+        (!favoritesOnly || map.isFavorite)
+    )
+    .sort((a, b) => Number(b.isFavorite) - Number(a.isFavorite));
 
   const toggleFilter = (category: MapCategory) =>
     setFilters((prev) => ({ ...prev, [category]: !prev[category] }));
@@ -121,6 +150,33 @@ const MapsLibrary: React.FC = () => {
       maxErrorDistanceKm: map.maxErrorDistanceKm,
       submitting: false,
     });
+  };
+
+  const calculateEditBoundaryScale = async () => {
+    if (!edit) return;
+    setEdit({ ...edit, calculating: true, calculateError: undefined });
+
+    try {
+      const res = await fetch(`/api/gamemap/${edit.map.id}/calculate-max-distance`);
+      const data = await res.json().catch(() => undefined);
+
+      if (!res.ok) {
+        setEdit({ ...edit, calculating: false, calculateError: data?.error ?? "Failed to calculate." });
+        return;
+      }
+
+      setEdit({
+        ...edit,
+        calculating: false,
+        maxErrorDistanceKm: Math.round(data.maxErrorDistanceKm),
+      });
+    } catch {
+      setEdit({
+        ...edit,
+        calculating: false,
+        calculateError: "Failed to calculate. Check your connection and try again.",
+      });
+    }
   };
 
   const submitEdit = async () => {
@@ -204,7 +260,7 @@ const MapsLibrary: React.FC = () => {
 
       {loadError && <Alert severity="error">{loadError}</Alert>}
 
-      {maps && maps.length > 0 && (
+      {!loadError && (!maps || maps.length > 0) && (
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
           <TextField
             value={search}
@@ -212,6 +268,7 @@ const MapsLibrary: React.FC = () => {
             placeholder="Search maps"
             fullWidth
             size="small"
+            disabled={!maps}
             slotProps={{
               input: {
                 startAdornment: (
@@ -226,6 +283,7 @@ const MapsLibrary: React.FC = () => {
             variant="outlined"
             startIcon={<FilterListIcon />}
             onClick={(e) => setFilterAnchor(e.currentTarget)}
+            disabled={!maps}
             sx={{ flexShrink: 0 }}
           >
             Filter
@@ -265,6 +323,16 @@ const MapsLibrary: React.FC = () => {
                 }
                 label="Community"
               />
+              <Divider sx={{ my: 1 }} />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={favoritesOnly}
+                    onChange={() => setFavoritesOnly((prev) => !prev)}
+                  />
+                }
+                label="Favorites only"
+              />
             </FormGroup>
           </Popover>
         </Stack>
@@ -286,7 +354,7 @@ const MapsLibrary: React.FC = () => {
         </Typography>
       )}
 
-      <Stack spacing={1}>
+      <Stack spacing={1} sx={{ maxHeight: "60vh", overflowY: "auto", pr: 0.5 }}>
         {filteredMaps?.map((map) => (
           <Paper
             key={map.id}
@@ -301,26 +369,37 @@ const MapsLibrary: React.FC = () => {
               "&:hover": { bgcolor: "action.hover" },
             }}
           >
-            {map.isOwn && (
-              <Tooltip title="Edit map">
-                <IconButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openEdit(map);
-                  }}
-                  sx={{
-                    position: "absolute",
-                    top: 8,
-                    right: 8,
-                    zIndex: 1,
-                    bgcolor: "background.paper",
-                    "&:hover": { bgcolor: "action.hover" },
-                  }}
-                >
-                  <EditIcon fontSize="small" />
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}
+            >
+              <Tooltip title={map.isFavorite ? "Remove from favorites" : "Add to favorites"}>
+                <IconButton onClick={(e) => toggleFavorite(map, e)}>
+                  {map.isFavorite ? (
+                    <StarIcon fontSize="small" sx={{ color: "warning.main" }} />
+                  ) : (
+                    <StarBorderIcon fontSize="small" />
+                  )}
                 </IconButton>
               </Tooltip>
-            )}
+              {map.isOwn && (
+                <Tooltip title="Edit map">
+                  <IconButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEdit(map);
+                    }}
+                    sx={{
+                      bgcolor: "background.paper",
+                      "&:hover": { bgcolor: "action.hover" },
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Stack>
             <Box
               component="img"
               src={
@@ -391,15 +470,26 @@ const MapsLibrary: React.FC = () => {
               minRows={2}
               fullWidth
             />
-            <TextField
-              label="Boundary scale (max error distance, km)"
-              type="number"
-              value={edit?.maxErrorDistanceKm ?? 0}
-              onChange={(e) => edit && setEdit({ ...edit, maxErrorDistanceKm: Number(e.target.value) })}
-              slotProps={{ htmlInput: { min: 1, max: 20_000 } }}
-              fullWidth
-              required
-            />
+            <Stack direction="row" spacing={1} alignItems="center">
+              <TextField
+                label="Boundary scale (max error distance, km)"
+                type="number"
+                value={edit?.maxErrorDistanceKm ?? 0}
+                onChange={(e) => edit && setEdit({ ...edit, maxErrorDistanceKm: Number(e.target.value) })}
+                slotProps={{ htmlInput: { min: 1, max: 20_000 } }}
+                fullWidth
+                required
+              />
+              <Button
+                variant="outlined"
+                onClick={calculateEditBoundaryScale}
+                loading={edit?.calculating}
+                sx={{ flexShrink: 0, height: 56 }}
+              >
+                Calculate
+              </Button>
+            </Stack>
+            {edit?.calculateError && <Alert severity="error">{edit.calculateError}</Alert>}
             <FormControlLabel
               control={
                 <Switch

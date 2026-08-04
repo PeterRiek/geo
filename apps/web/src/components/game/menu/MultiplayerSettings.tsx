@@ -90,8 +90,10 @@ const MultiplayerSettings: React.FC<any> = ({
   setMoveEnabled,
   setPanEnabled,
   setZoomEnabled,
-  roomId,
-  setRoomId,
+  createRoomId,
+  setCreateRoomId,
+  joinRoomId,
+  setJoinRoomId,
   multiplayer,
   setMultiplayer,
   createRoom,
@@ -121,7 +123,7 @@ const MultiplayerSettings: React.FC<any> = ({
   };
 
   const handleCopyInviteLink = async () => {
-    const link = `${window.location.origin}/game/play/mp?roomId=${roomId}`;
+    const link = `${window.location.origin}/game/play/mp?roomId=${createRoomId}`;
 
     if (navigator.clipboard?.writeText) {
       try {
@@ -159,13 +161,13 @@ const MultiplayerSettings: React.FC<any> = ({
       color="primary"
       sx={{ mb: 2 }}
     >
-      <ToggleButton value="join">
-        <LoginIcon sx={{ mr: 1 }} fontSize="small" />
-        Join
-      </ToggleButton>
       <ToggleButton value="create">
         <AddCircleOutlineIcon sx={{ mr: 1 }} fontSize="small" />
         Create
+      </ToggleButton>
+      <ToggleButton value="join">
+        <LoginIcon sx={{ mr: 1 }} fontSize="small" />
+        Join
       </ToggleButton>
     </ToggleButtonGroup>
 
@@ -187,17 +189,18 @@ const MultiplayerSettings: React.FC<any> = ({
           <Paper sx={{ p: 1 }}>
             <TextField
               label="Room ID"
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
+              value={joinRoomId}
+              onChange={(e) => setJoinRoomId(e.target.value)}
               fullWidth
             />
           </Paper>
           <Button
-            href={`/game/play/mp?roomId=${roomId}`}
+            href={`/game/play/mp?roomId=${joinRoomId}`}
             variant="contained"
             size="large"
             fullWidth
-            disabled={!roomId}
+            disabled={!joinRoomId}
+            startIcon={<LoginIcon />}
           >
             Join Game
           </Button>
@@ -230,8 +233,8 @@ const MultiplayerSettings: React.FC<any> = ({
           <Paper sx={{ p: 1 }}>
             <TextField
               label="Room ID"
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
+              value={createRoomId}
+              onChange={(e) => setCreateRoomId(e.target.value)}
               fullWidth
               helperText="Share this code, or copy an invite link for your friends"
               slotProps={{
@@ -242,7 +245,7 @@ const MultiplayerSettings: React.FC<any> = ({
                         <span>
                           <IconButton
                             onClick={handleCopyInviteLink}
-                            disabled={!roomId}
+                            disabled={!createRoomId}
                             edge="end"
                           >
                             <ContentCopyIcon fontSize="small" />
@@ -258,7 +261,7 @@ const MultiplayerSettings: React.FC<any> = ({
           {roomError && <Alert severity="error">{roomError}</Alert>}
           <Button
             onClick={() => {
-              createRoom(roomId, {
+              createRoom(createRoomId, {
                 allowMove: moveEnabled,
                 allowPan: panEnabled,
                 allowZoom: zoomEnabled,
@@ -273,7 +276,8 @@ const MultiplayerSettings: React.FC<any> = ({
             size="large"
             fullWidth
             loading={isCreatingRoom}
-            disabled={!selectedMap || !roomId || isCreatingRoom}
+            disabled={!selectedMap || !createRoomId || isCreatingRoom}
+            startIcon={<AddCircleOutlineIcon />}
           >
             {selectedMap ? "Create Game" : "Select a map"}
           </Button>

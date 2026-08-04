@@ -57,8 +57,21 @@ interface RecentGame {
   otherPlayers: string[];
 }
 
+interface ExploreMap {
+  id: number;
+  name: string;
+  imageUrl?: string;
+}
+
 const RECENT_GAMES_LIMIT = 3;
 const JUMP_BACK_IN_LOOKBACK = 50;
+const EXPLORE_MAPS_LIMIT = 3;
+// Slight fan-out per card so the stack reads as a deck rather than flat overlapping squares.
+const EXPLORE_STACK_OFFSETS = [
+  { rotate: -10, x: -22, z: 1 },
+  { rotate: 8, x: 22, z: 2 },
+  { rotate: 0, x: 0, z: 3 },
+];
 
 const HomePage = async ({ searchParams }: HomePageProps) => {
   const session = await auth();
@@ -68,6 +81,7 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
   let canPlay: CanPlayData | undefined;
   let lastSession: LastSession | undefined;
   let recentGames: RecentGame[] = [];
+  let exploreMaps: ExploreMap[] = [];
   if (session?.user) {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/can-play`, {
@@ -77,6 +91,19 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
       if (res.ok) canPlay = await res.json();
     } catch {
       // fall back to CTA without a play count below
+    }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gamemap`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const maps: ExploreMap[] = await res.json();
+        exploreMaps = maps.slice(0, EXPLORE_MAPS_LIMIT);
+      }
+    } catch {
+      // fall back to an imageless explore section below
     }
 
     try {
@@ -133,6 +160,12 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
       }).toString()}`
     : undefined;
 
+  const outOfGamesToday = canPlay?.canPlay === false;
+  // Out of games today pre-empts "Jump back in" (nothing to jump back into until tomorrow), and a
+  // new/no-recent-history player has nothing to jump back into either — both fall back to Explore.
+  const showJumpBackIn = !!session?.user && !!lastSession && !!lastSessionHref && !outOfGamesToday;
+  const showExploreMaps = !!session?.user && (outOfGamesToday || !lastSession);
+
   return (
     <Container
       sx={{
@@ -185,15 +218,24 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
               games played today
             </Typography>
           )}
-          <Button
-            href="/game"
-            variant="contained"
-            size="large"
-            endIcon={<SportsEsportsIcon />}
-            sx={{ px: 6 }}
+          <Tooltip
+            title={outOfGamesToday ? "You've used all your games for today — come back tomorrow!" : ""}
+            disableHoverListener={!outOfGamesToday}
+            disableFocusListener={!outOfGamesToday}
           >
-            Play
-          </Button>
+            <span>
+              <Button
+                href="/game"
+                variant="contained"
+                size="large"
+                endIcon={<SportsEsportsIcon />}
+                sx={{ px: 6 }}
+                disabled={outOfGamesToday}
+              >
+                Play
+              </Button>
+            </span>
+          </Tooltip>
         </Paper>
       ) : (
         <Paper elevation={3} sx={{ width: "100%", maxWidth: 480, flexShrink: 0, p: 4 }}>
@@ -204,7 +246,7 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
         </Paper>
       )}
 
-      {lastSession && lastSessionHref && (
+      {showJumpBackIn && lastSession && (
         <Box sx={{ width: "100%", maxWidth: 480, flexShrink: 0 }}>
           <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
             Jump back in
@@ -252,6 +294,70 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
             </Box>
             <Stack alignItems="center" sx={{ flexShrink: 0 }}>
               <PlayArrowIcon color="primary" fontSize="large" />
+            </Stack>
+          </Paper>
+        </Box>
+      )}
+
+      {showExploreMaps && (
+        <Box sx={{ width: "100%", maxWidth: 480, flexShrink: 0 }}>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
+            Explore maps
+          </Typography>
+          <Paper
+            elevation={3}
+            component={Link}
+            href="/game/maps"
+            sx={{
+              width: "100%",
+              p: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              textDecoration: "none",
+              color: "inherit",
+              "&:hover": { bgcolor: "action.hover" },
+            }}
+          >
+            <Box sx={{ position: "relative", width: 96, height: 96, flexShrink: 0 }}>
+              {EXPLORE_STACK_OFFSETS.map(({ rotate, x, z }, i) => {
+                const map = exploreMaps[i];
+                return (
+                  <Box
+                    key={i}
+                    component={map?.imageUrl ? "img" : "div"}
+                    src={map?.imageUrl ? `${getPublicBackendOrigin()}${map.imageUrl}` : undefined}
+                    alt=""
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      left: "50%",
+                      width: 64,
+                      height: 64,
+                      ml: "-32px",
+                      borderRadius: 1.5,
+                      objectFit: "cover",
+                      bgcolor: "action.hover",
+                      border: "2px solid",
+                      borderColor: "background.paper",
+                      boxShadow: 2,
+                      transform: `translateX(${x * 0.6}px) rotate(${rotate}deg)`,
+                      zIndex: z,
+                    }}
+                  />
+                );
+              })}
+            </Box>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="subtitle1" fontWeight={600} noWrap>
+                Discover new maps
+              </Typography>
+              <Typography variant="body2" color="text.secondary" noWrap>
+                Official collections and community creations
+              </Typography>
+            </Box>
+            <Stack alignItems="center" sx={{ flexShrink: 0 }}>
+              <MapIcon color="primary" fontSize="large" />
             </Stack>
           </Paper>
         </Box>

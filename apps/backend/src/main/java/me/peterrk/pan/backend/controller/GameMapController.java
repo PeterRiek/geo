@@ -3,6 +3,7 @@ package me.peterrk.pan.backend.controller;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -45,8 +47,10 @@ public class GameMapController {
   @GetMapping()
   public ResponseEntity<?> getAllGameMaps(Authentication auth) {
     User currentUser = currentUser(auth);
+    Set<Long> favoriteMapIds = gameMapService.getFavoriteMapIds(currentUser);
     List<GameMapDto> maps = gameMapService.getVisibleGameMaps(currentUser).stream()
-        .map(m -> new GameMapDto(m, currentUser, gameMapService.resolveLocationCount(m)))
+        .map(m -> new GameMapDto(m, currentUser, gameMapService.resolveLocationCount(m),
+            favoriteMapIds.contains(m.getId())))
         .toList();
     return ResponseEntity.status(HttpStatus.OK).body(maps);
   }
@@ -57,8 +61,9 @@ public class GameMapController {
     GameMap gameMap = accessibleMap(mapId, currentUser);
     if (gameMap == null)
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
+    boolean isFavorite = gameMapService.isFavorite(mapId, currentUser.getId());
     return ResponseEntity.status(HttpStatus.OK)
-        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap)));
+        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap), isFavorite));
   }
 
   @GetMapping("/{id}/locations")
@@ -104,7 +109,7 @@ public class GameMapController {
     GameMap gameMap = gameMapService.uploadMap(name, coordinatesFile, imageFile, currentUser, isPublic,
         maxErrorDistanceKm, description);
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap)));
+        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap), false));
   }
 
   public record MaxDistanceResponse(double maxErrorDistanceKm) {
@@ -116,6 +121,17 @@ public class GameMapController {
   public ResponseEntity<?> calculateMaxDistance(@RequestParam("coordinates") MultipartFile coordinatesFile)
       throws IOException {
     double km = gameMapService.calculateMaxErrorDistanceKm(coordinatesFile);
+    return ResponseEntity.ok(new MaxDistanceResponse(km));
+  }
+
+  // Same suggestion, but for an already-uploaded map — used by the edit dialog's "Calculate"
+  // button, which has no coordinates file on hand, only the map's id.
+  @GetMapping("/{id}/calculate-max-distance")
+  public ResponseEntity<?> calculateMaxDistanceForMap(Authentication auth, @PathVariable("id") Long mapId) {
+    User currentUser = currentUser(auth);
+    if (accessibleMap(mapId, currentUser) == null)
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
+    double km = gameMapService.calculateMaxErrorDistanceKm(mapId);
     return ResponseEntity.ok(new MaxDistanceResponse(km));
   }
 
@@ -134,7 +150,9 @@ public class GameMapController {
         body.description(), currentUser, isAdmin(auth));
     if (gameMap == null)
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
-    return ResponseEntity.ok(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap)));
+    boolean isFavorite = gameMapService.isFavorite(mapId, currentUser.getId());
+    return ResponseEntity
+        .ok(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap), isFavorite));
   }
 
   @DeleteMapping("/{id}")
@@ -143,6 +161,24 @@ public class GameMapController {
     boolean deleted = gameMapService.deleteMap(mapId, currentUser, isAdmin(auth));
     if (!deleted)
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
+    return ResponseEntity.noContent().build();
+  }
+
+  @PutMapping("/{id}/favorite")
+  public ResponseEntity<?> favoriteMap(Authentication auth, @PathVariable("id") Long mapId) {
+    User currentUser = currentUser(auth);
+    if (accessibleMap(mapId, currentUser) == null)
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
+    gameMapService.addFavorite(mapId, currentUser);
+    return ResponseEntity.noContent().build();
+  }
+
+  @DeleteMapping("/{id}/favorite")
+  public ResponseEntity<?> unfavoriteMap(Authentication auth, @PathVariable("id") Long mapId) {
+    User currentUser = currentUser(auth);
+    if (accessibleMap(mapId, currentUser) == null)
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
+    gameMapService.removeFavorite(mapId, currentUser);
     return ResponseEntity.noContent().build();
   }
 

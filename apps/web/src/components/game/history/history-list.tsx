@@ -10,6 +10,13 @@ import GameFallback from "@/components/game/game-fallback";
 import HistoryListSkeleton from "@/components/game/history/history-list-skeleton";
 import { getPublicBackendOrigin } from "@/lib/backend-url";
 
+const pad2 = (n: number) => n.toString().padStart(2, "0");
+
+const formatFinishedAt = (isoString: string) => {
+  const d = new Date(isoString);
+  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}, ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+
 interface GameSessionSummary {
   id: number;
   mode: "SINGLEPLAYER" | "MULTIPLAYER";
@@ -163,7 +170,7 @@ const HistoryList: React.FC = () => {
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {session.roundCount} rounds &middot;{" "}
-                  {new Date(session.finishedAt).toLocaleString()}
+                  {formatFinishedAt(session.finishedAt)}
                 </Typography>
               </Box>
             </Box>

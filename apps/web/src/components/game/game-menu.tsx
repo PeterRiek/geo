@@ -41,11 +41,12 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   >([]);
   const [mapsLoading, setMapsLoading] = useState(true);
   const [selectedMap, setSelectedMap] = useState<number>();
-  const [roomId, setRoomId] = useState("");
+  const [createRoomId, setCreateRoomId] = useState("");
+  const [joinRoomId, setJoinRoomId] = useState("");
   const [mode, setMode] = useState<"singleplayer" | "multiplayer">(
     "singleplayer"
   );
-  const [multiplayer, setMultiplayer] = useState<"join" | "create">("join");
+  const [multiplayer, setMultiplayer] = useState<"join" | "create">("create");
   const [moveEnabled, setMoveEnabled] = useState(true);
   const [panEnabled, setPanEnabled] = useState(true);
   const [zoomEnabled, setZoomEnabled] = useState(true);
@@ -140,10 +141,10 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
   useEffect(() => clearCreateTimeout, []);
 
   useEffect(() => {
-    if (mode === "multiplayer" && multiplayer === "create" && !roomId) {
-      setRoomId(generateRoomCode());
+    if (mode === "multiplayer" && multiplayer === "create" && !createRoomId) {
+      setCreateRoomId(generateRoomCode());
     }
-  }, [mode, multiplayer, roomId]);
+  }, [mode, multiplayer, createRoomId]);
 
   useEffect(() => {
     const loadMaps = async () => {
@@ -250,8 +251,10 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
             setMoveEnabled,
             setPanEnabled,
             setZoomEnabled,
-            roomId,
-            setRoomId,
+            createRoomId,
+            setCreateRoomId,
+            joinRoomId,
+            setJoinRoomId,
             multiplayer,
             setMultiplayer,
             createRoom: handleCreateRoom,

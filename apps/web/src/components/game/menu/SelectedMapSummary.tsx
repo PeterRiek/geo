@@ -68,7 +68,7 @@ const SelectedMapSummary: React.FC<{
           width: "100%",
         }}
       >
-        <Button href="/game/maps" variant="outlined" startIcon={<AddIcon />}>
+        <Button href="/game/maps" variant="text" startIcon={<AddIcon />}>
           Select map
         </Button>
       </Box>

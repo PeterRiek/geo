@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.imageio.ImageIO;
@@ -24,8 +26,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import me.peterrk.pan.backend.dto.ws.LatLng;
+import me.peterrk.pan.backend.model.FavoriteMap;
 import me.peterrk.pan.backend.model.GameMap;
 import me.peterrk.pan.backend.model.User;
+import me.peterrk.pan.backend.repository.FavoriteMapRepository;
 import me.peterrk.pan.backend.repository.GameMapRepository;
 import me.peterrk.pan.backend.util.GeoUtils;
 
@@ -45,6 +49,7 @@ public class GameMapService {
       "image/png", "png");
 
   private final GameMapRepository gameMapRepository;
+  private final FavoriteMapRepository favoriteMapRepository;
   private final RestTemplate restTemplate;
 
   @Value("${app.uploads.dir:uploads}")
@@ -52,8 +57,10 @@ public class GameMapService {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  public GameMapService(GameMapRepository gameMapRepository, RestTemplate restTemplate) {
+  public GameMapService(GameMapRepository gameMapRepository, FavoriteMapRepository favoriteMapRepository,
+      RestTemplate restTemplate) {
     this.gameMapRepository = gameMapRepository;
+    this.favoriteMapRepository = favoriteMapRepository;
     this.restTemplate = restTemplate;
   }
 
@@ -75,6 +82,24 @@ public class GameMapService {
 
   private boolean isEffectivelyPublic(GameMap map) {
     return map.getIsPublic() == null || map.getIsPublic();
+  }
+
+  public boolean isFavorite(Long mapId, Long userId) {
+    return favoriteMapRepository.existsByUserIdAndMapId(userId, mapId);
+  }
+
+  public Set<Long> getFavoriteMapIds(User user) {
+    return new HashSet<>(favoriteMapRepository.findMapIdsByUserId(user.getId()));
+  }
+
+  public void addFavorite(Long mapId, User user) {
+    if (!favoriteMapRepository.existsByUserIdAndMapId(user.getId(), mapId)) {
+      favoriteMapRepository.save(new FavoriteMap(user.getId(), mapId));
+    }
+  }
+
+  public void removeFavorite(Long mapId, User user) {
+    favoriteMapRepository.deleteByUserIdAndMapId(user.getId(), mapId);
   }
 
   public List<LatLng> getCustomCoordinates(Long mapId) {
@@ -209,7 +234,23 @@ public class GameMapService {
       throw new IllegalArgumentException("A coordinates JSON file is required");
     }
     List<LatLng> coordinates = validateCoordinates(coordinatesFile.getBytes());
+    return boundingBoxMaxErrorDistanceKm(coordinates);
+  }
 
+  /**
+   * Same suggestion as {@link #calculateMaxErrorDistanceKm(MultipartFile)}, but for a map that's
+   * already uploaded — reuses its stored coordinates instead of a freshly-picked file. Used by the
+   * edit dialog's "Calculate" button. Throws IllegalArgumentException if the map has no coordinates.
+   */
+  public double calculateMaxErrorDistanceKm(Long mapId) {
+    List<LatLng> coordinates = getCustomCoordinates(mapId);
+    if (coordinates.isEmpty()) {
+      throw new IllegalArgumentException("No coordinates found for this map");
+    }
+    return boundingBoxMaxErrorDistanceKm(coordinates);
+  }
+
+  private double boundingBoxMaxErrorDistanceKm(List<LatLng> coordinates) {
     double minLat = Double.MAX_VALUE;
     double maxLat = -Double.MAX_VALUE;
     double minLng = Double.MAX_VALUE;
@@ -266,6 +307,7 @@ public class GameMapService {
       throw new AccessDeniedException("Not allowed to delete this map");
     }
     gameMapRepository.delete(map);
+    favoriteMapRepository.deleteByMapId(mapId);
     deleteLocalFileIfAny(coordinatesRoot(), map.getJsonFileUrl());
     if (map.getImageUrl() != null && map.getImageUrl().startsWith("/uploads/images/")) {
       deleteLocalFileIfAny(imagesRoot(), map.getImageUrl().substring("/uploads/images/".length()));
