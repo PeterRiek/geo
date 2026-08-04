@@ -275,13 +275,7 @@ const MultiplayerSettings: React.FC<any> = ({
             loading={isCreatingRoom}
             disabled={!selectedMap || !roomId || isCreatingRoom}
           >
-            {selectedMap
-              ? `Create Game — ${
-                  (maps as { id: number; name: string }[]).find(
-                    (m) => m.id === selectedMap
-                  )?.name ?? ""
-                }`
-              : "Select a map"}
+            {selectedMap ? "Create Game" : "Select a map"}
           </Button>
         </>
       )}
