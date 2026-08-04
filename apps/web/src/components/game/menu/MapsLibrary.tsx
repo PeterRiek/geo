@@ -36,6 +36,8 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import PersonIcon from "@mui/icons-material/Person";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
+import SortIcon from "@mui/icons-material/Sort";
+import CheckIcon from "@mui/icons-material/Check";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
@@ -52,7 +54,31 @@ interface GameMap {
   isOwn: boolean;
   isFavorite: boolean;
   maxErrorDistanceKm: number;
+  playCount: number;
 }
+
+type SortOption = "title-asc" | "title-desc" | "creator-asc" | "creator-desc" | "popular";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  "title-asc": "Title (A–Z)",
+  "title-desc": "Title (Z–A)",
+  "creator-asc": "Creator (A–Z)",
+  "creator-desc": "Creator (Z–A)",
+  popular: "Most played",
+};
+
+// Official/ownerless maps have no ownerUsername, treated as "" — sorts before any name in A-Z
+// (and after in Z-A), same as any other string comparison.
+const compareOwner = (a: GameMap, b: GameMap, dir: 1 | -1) =>
+  dir * (a.ownerUsername ?? "").localeCompare(b.ownerUsername ?? "");
+
+const SORT_COMPARATORS: Record<SortOption, (a: GameMap, b: GameMap) => number> = {
+  "title-asc": (a, b) => a.name.localeCompare(b.name),
+  "title-desc": (a, b) => b.name.localeCompare(a.name),
+  "creator-asc": (a, b) => compareOwner(a, b, 1),
+  "creator-desc": (a, b) => compareOwner(a, b, -1),
+  popular: (a, b) => b.playCount - a.playCount || a.name.localeCompare(b.name),
+};
 
 interface EditState {
   map: GameMap;
@@ -81,7 +107,9 @@ const MapsLibrary: React.FC = () => {
     community: true,
   });
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>("title-asc");
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+  const [sortAnchor, setSortAnchor] = useState<HTMLElement | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [loadError, setLoadError] = useState<string>();
   const [edit, setEdit] = useState<EditState>();
@@ -136,7 +164,7 @@ const MapsLibrary: React.FC = () => {
         filters[mapCategory(map)] &&
         (!favoritesOnly || map.isFavorite)
     )
-    .sort((a, b) => Number(b.isFavorite) - Number(a.isFavorite));
+    .sort(SORT_COMPARATORS[sortBy]);
 
   const toggleFilter = (category: MapCategory) =>
     setFilters((prev) => ({ ...prev, [category]: !prev[category] }));
@@ -284,9 +312,19 @@ const MapsLibrary: React.FC = () => {
             startIcon={<FilterListIcon />}
             onClick={(e) => setFilterAnchor(e.currentTarget)}
             disabled={!maps}
-            sx={{ flexShrink: 0 }}
+            sx={{
+              minWidth: 0,
+              height: 40,
+              flexShrink: 0,
+              px: { xs: 1.5, sm: 2 },
+              color: "text.secondary",
+              borderColor: "divider",
+              "& .MuiButton-startIcon": { mx: { xs: 0, sm: undefined } },
+            }}
           >
-            Filter
+            <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+              Filter
+            </Box>
           </Button>
           <Popover
             open={!!filterAnchor}
@@ -335,6 +373,46 @@ const MapsLibrary: React.FC = () => {
               />
             </FormGroup>
           </Popover>
+          <Button
+            variant="outlined"
+            startIcon={<SortIcon />}
+            onClick={(e) => setSortAnchor(e.currentTarget)}
+            disabled={!maps}
+            sx={{
+              minWidth: 0,
+              height: 40,
+              flexShrink: 0,
+              px: { xs: 1.5, sm: 2 },
+              color: "text.secondary",
+              borderColor: "divider",
+              "& .MuiButton-startIcon": { mx: { xs: 0, sm: undefined } },
+            }}
+          >
+            <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+              Sort
+            </Box>
+          </Button>
+          <Menu
+            open={!!sortAnchor}
+            anchorEl={sortAnchor}
+            onClose={() => setSortAnchor(null)}
+          >
+            {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
+              <MenuItem
+                key={option}
+                selected={sortBy === option}
+                onClick={() => {
+                  setSortBy(option);
+                  setSortAnchor(null);
+                }}
+              >
+                <ListItemIcon>
+                  {sortBy === option && <CheckIcon fontSize="small" />}
+                </ListItemIcon>
+                <ListItemText>{SORT_LABELS[option]}</ListItemText>
+              </MenuItem>
+            ))}
+          </Menu>
         </Stack>
       )}
 

@@ -2,6 +2,7 @@ package me.peterrk.pan.backend.controller;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -48,9 +49,10 @@ public class GameMapController {
   public ResponseEntity<?> getAllGameMaps(Authentication auth) {
     User currentUser = currentUser(auth);
     Set<Long> favoriteMapIds = gameMapService.getFavoriteMapIds(currentUser);
+    Map<Long, Long> playCounts = gameMapService.getPlayCounts();
     List<GameMapDto> maps = gameMapService.getVisibleGameMaps(currentUser).stream()
         .map(m -> new GameMapDto(m, currentUser, gameMapService.resolveLocationCount(m),
-            favoriteMapIds.contains(m.getId())))
+            favoriteMapIds.contains(m.getId()), playCounts.getOrDefault(m.getId(), 0L)))
         .toList();
     return ResponseEntity.status(HttpStatus.OK).body(maps);
   }
@@ -63,7 +65,8 @@ public class GameMapController {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
     boolean isFavorite = gameMapService.isFavorite(mapId, currentUser.getId());
     return ResponseEntity.status(HttpStatus.OK)
-        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap), isFavorite));
+        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap), isFavorite,
+            gameMapService.getPlayCount(mapId)));
   }
 
   @GetMapping("/{id}/locations")
@@ -109,7 +112,7 @@ public class GameMapController {
     GameMap gameMap = gameMapService.uploadMap(name, coordinatesFile, imageFile, currentUser, isPublic,
         maxErrorDistanceKm, description);
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap), false));
+        .body(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap), false, 0L));
   }
 
   public record MaxDistanceResponse(double maxErrorDistanceKm) {
@@ -152,7 +155,8 @@ public class GameMapController {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
     boolean isFavorite = gameMapService.isFavorite(mapId, currentUser.getId());
     return ResponseEntity
-        .ok(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap), isFavorite));
+        .ok(new GameMapDto(gameMap, currentUser, gameMapService.resolveLocationCount(gameMap), isFavorite,
+            gameMapService.getPlayCount(mapId)));
   }
 
   @DeleteMapping("/{id}")
