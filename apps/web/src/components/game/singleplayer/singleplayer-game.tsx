@@ -32,6 +32,15 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const [roundFinished, setRoundFinished] = useState(false);
   const [prevGamePhase, setPrevGamePhase] = useState("");
 
+  // Mirrors of the two states above, kept fresh every render — the deadline-triggered auto-submit
+  // below schedules its setTimeout once per round rather than every render, so it can't rely on a
+  // closure over guessLocation/roundFinished (that would freeze at whatever they were at round
+  // start); it reads these instead so it always sees the latest pin placement.
+  const guessLocationRef = useRef(guessLocation);
+  guessLocationRef.current = guessLocation;
+  const roundFinishedRef = useRef(roundFinished);
+  roundFinishedRef.current = roundFinished;
+
   const secondsLeft = useCountdown(
     gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined
   );
@@ -92,15 +101,27 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   };
 
   useEffect(() => {
-    // Timer hit 0: auto-submit whatever pin is already placed rather than
-    // losing it to the server's timeout resolution.
-    if (secondsLeft === 0 && !roundFinished) {
-      onGuess();
-    }
-    // Intentionally only reacting to the countdown reaching 0 — onGuess/guessLocation
-    // are read from the latest closure at that moment, not on every change of theirs.
+    // Auto-submit whatever pin is already placed right at the deadline, rather than losing it to
+    // the server's own timeout resolution. Scheduled directly off roundEndsAt (not off the
+    // display-only secondsLeft tick from useCountdown, which only updates once a second and isn't
+    // phase-aligned to the deadline) — waiting for that tick can fire up to ~1s late, which is
+    // enough for the server's RoundTimeoutScheduler (also polling every second) to have already
+    // resolved the round as a timeout before our late guess arrives.
+    const roundEndsAt =
+      gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined;
+    if (!roundEndsAt) return;
+
+    const msRemaining = roundEndsAt - Date.now();
+    const timeout = setTimeout(() => {
+      if (roundFinishedRef.current || !guessLocationRef.current) return;
+      submitGuess(guessLocationRef.current);
+      setRoundFinished(true);
+    }, Math.max(0, msRemaining));
+    return () => clearTimeout(timeout);
+    // Only re-schedule when the deadline itself changes — the timeout body reads the refs above
+    // instead of closing over state, so it doesn't need onGuess/roundFinished/guessLocation here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secondsLeft]);
+  }, [gameState?.roundEndsAt, gameState?.roomPhase]);
 
   let content: React.ReactNode;
   let phaseKey: string;
