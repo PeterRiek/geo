@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import me.peterrk.pan.backend.model.GameMap;
 import me.peterrk.pan.backend.model.User;
 import me.peterrk.pan.backend.repository.FavoriteMapRepository;
 import me.peterrk.pan.backend.repository.GameMapRepository;
+import me.peterrk.pan.backend.repository.GameSessionRepository;
 import me.peterrk.pan.backend.util.GeoUtils;
 
 @Service
@@ -50,6 +52,7 @@ public class GameMapService {
 
   private final GameMapRepository gameMapRepository;
   private final FavoriteMapRepository favoriteMapRepository;
+  private final GameSessionRepository gameSessionRepository;
   private final RestTemplate restTemplate;
 
   @Value("${app.uploads.dir:uploads}")
@@ -58,9 +61,10 @@ public class GameMapService {
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   public GameMapService(GameMapRepository gameMapRepository, FavoriteMapRepository favoriteMapRepository,
-      RestTemplate restTemplate) {
+      GameSessionRepository gameSessionRepository, RestTemplate restTemplate) {
     this.gameMapRepository = gameMapRepository;
     this.favoriteMapRepository = favoriteMapRepository;
+    this.gameSessionRepository = gameSessionRepository;
     this.restTemplate = restTemplate;
   }
 
@@ -90,6 +94,20 @@ public class GameMapService {
 
   public Set<Long> getFavoriteMapIds(User user) {
     return new HashSet<>(favoriteMapRepository.findMapIdsByUserId(user.getId()));
+  }
+
+  // Global play counts across all users, keyed by mapId — powers the "most played" sort in the
+  // maps library. Bulk query, mirroring getFavoriteMapIds, rather than one query per map.
+  public Map<Long, Long> getPlayCounts() {
+    Map<Long, Long> counts = new HashMap<>();
+    for (Object[] row : gameSessionRepository.countSessionsByMapId()) {
+      counts.put((Long) row[0], (Long) row[1]);
+    }
+    return counts;
+  }
+
+  public long getPlayCount(Long mapId) {
+    return getPlayCounts().getOrDefault(mapId, 0L);
   }
 
   public void addFavorite(Long mapId, User user) {

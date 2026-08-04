@@ -23,11 +23,13 @@ public class GameMapDto {
   private final boolean isFavorite;
   private final double maxErrorDistanceKm;
   private final int locationCount;
+  private final long playCount;
 
-  // locationCount and isFavorite are passed in explicitly rather than resolved here — resolving
-  // them can require parsing the coordinates file / a separate favorites lookup, which doesn't
-  // belong inside a DTO constructor. See GameMapService#resolveLocationCount and #isFavorite.
-  public GameMapDto(GameMap map, User currentUser, int locationCount, boolean isFavorite) {
+  // locationCount, isFavorite, and playCount are passed in explicitly rather than resolved here —
+  // resolving them can require parsing the coordinates file / a separate bulk lookup, which
+  // doesn't belong inside a DTO constructor. See GameMapService#resolveLocationCount, #isFavorite,
+  // and #getPlayCounts.
+  public GameMapDto(GameMap map, User currentUser, int locationCount, boolean isFavorite, long playCount) {
     this.id = map.getId();
     this.name = map.getName();
     this.imageUrl = map.getImageUrl();
@@ -41,6 +43,7 @@ public class GameMapDto {
         ? map.getMaxErrorDistanceKm()
         : GeoUtils.DEFAULT_MAX_ERROR_DISTANCE_KM;
     this.locationCount = locationCount;
+    this.playCount = playCount;
   }
 
   public Long getId() {
@@ -87,5 +90,9 @@ public class GameMapDto {
 
   public int getLocationCount() {
     return locationCount;
+  }
+
+  public long getPlayCount() {
+    return playCount;
   }
 }
