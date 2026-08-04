@@ -97,10 +97,11 @@ public class GameMapController {
       @RequestParam("coordinates") MultipartFile coordinatesFile,
       @RequestParam("image") MultipartFile imageFile,
       @RequestParam(value = "isPublic", defaultValue = "false") boolean isPublic,
-      @RequestParam(value = "maxErrorDistanceKm", required = false) Double maxErrorDistanceKm) throws IOException {
+      @RequestParam(value = "maxErrorDistanceKm", required = false) Double maxErrorDistanceKm,
+      @RequestParam(value = "description", required = false) String description) throws IOException {
     User currentUser = currentUser(auth);
     GameMap gameMap = gameMapService.uploadMap(name, coordinatesFile, imageFile, currentUser, isPublic,
-        maxErrorDistanceKm);
+        maxErrorDistanceKm, description);
     return ResponseEntity.status(HttpStatus.CREATED).body(new GameMapDto(gameMap, currentUser));
   }
 
@@ -108,7 +109,7 @@ public class GameMapController {
   // isXxx()-style accessors can otherwise bind "isPublic" as "public" — see GameMapDto for the
   // same issue on the response side.
   public record UpdateMapRequest(String name, @JsonProperty("isPublic") Boolean isPublic,
-      Double maxErrorDistanceKm) {
+      Double maxErrorDistanceKm, String description) {
   }
 
   @PatchMapping("/{id}")
@@ -116,7 +117,7 @@ public class GameMapController {
       @RequestBody UpdateMapRequest body) {
     User currentUser = currentUser(auth);
     GameMap gameMap = gameMapService.updateMap(mapId, body.name(), body.isPublic(), body.maxErrorDistanceKm(),
-        currentUser, isAdmin(auth));
+        body.description(), currentUser, isAdmin(auth));
     if (gameMap == null)
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Requested map not found");
     return ResponseEntity.ok(new GameMapDto(gameMap, currentUser));

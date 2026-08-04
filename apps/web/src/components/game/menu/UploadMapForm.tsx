@@ -21,6 +21,7 @@ const DEFAULT_MAX_ERROR_DISTANCE_KM = 10_000;
 const UploadMapForm: React.FC = () => {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [coordinatesFile, setCoordinatesFile] = useState<File>();
   const [imageFile, setImageFile] = useState<File>();
   const [isPublic, setIsPublic] = useState(false);
@@ -48,6 +49,7 @@ const UploadMapForm: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append("name", name.trim());
+      formData.append("description", description.trim());
       formData.append("coordinates", coordinatesFile);
       formData.append("image", imageFile);
       formData.append("isPublic", String(isPublic));
@@ -63,6 +65,7 @@ const UploadMapForm: React.FC = () => {
 
       setSuccess(true);
       setName("");
+      setDescription("");
       setCoordinatesFile(undefined);
       setImageFile(undefined);
       setIsPublic(false);
@@ -92,6 +95,16 @@ const UploadMapForm: React.FC = () => {
             onChange={(e) => setName(e.target.value)}
             fullWidth
             required
+          />
+
+          <TextField
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            helperText="Optional — shown to players before they start a round on this map."
+            multiline
+            minRows={2}
+            fullWidth
           />
 
           <TextField
@@ -143,7 +156,7 @@ const UploadMapForm: React.FC = () => {
           {error && <Alert severity="error">{error}</Alert>}
           {success && (
             <Alert severity="success" action={
-              <Button color="inherit" size="small" onClick={() => router.push("/game")}>
+              <Button color="inherit" size="small" onClick={() => router.push("/game/maps")}>
                 Go play
               </Button>
             }>

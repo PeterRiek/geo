@@ -45,6 +45,11 @@ public class GlobalExceptionHandler {
     return error(HttpStatus.FORBIDDEN, "Access denied");
   }
 
+  @ExceptionHandler(UsernameAlreadyExistsException.class)
+  public ResponseEntity<Map<String, String>> handleUsernameConflict(UsernameAlreadyExistsException e) {
+    return error(HttpStatus.CONFLICT, e.getMessage());
+  }
+
   @ExceptionHandler(UsernameNotFoundException.class)
   public ResponseEntity<Map<String, String>> handleNotFound(UsernameNotFoundException e) {
     return error(HttpStatus.NOT_FOUND, e.getMessage());

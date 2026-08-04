@@ -46,6 +46,9 @@ public class GameMap {
   @Column(name = "max_error_distance_km")
   private Double maxErrorDistanceKm;
 
+  @Column(name = "description", columnDefinition = "TEXT")
+  private String description;
+
   public GameMap() {
   }
 
@@ -114,5 +117,13 @@ public class GameMap {
 
   public void setMaxErrorDistanceKm(Double maxErrorDistanceKm) {
     this.maxErrorDistanceKm = maxErrorDistanceKm;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
   }
 }

@@ -32,6 +32,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
       id: number;
       name: string;
       imageUrl?: string;
+      description?: string;
       maxErrorDistanceKm?: number;
       ownerUsername?: string;
     }[]
@@ -152,6 +153,7 @@ const GameMenu: React.FC<{ accessToken: string; username: string }> = ({
           id: m.id,
           name: m.name,
           imageUrl: m.imageUrl,
+          description: m.description,
           maxErrorDistanceKm: m.maxErrorDistanceKm,
           ownerUsername: m.ownerUsername,
         }))

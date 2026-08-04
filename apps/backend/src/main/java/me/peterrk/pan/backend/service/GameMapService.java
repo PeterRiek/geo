@@ -36,6 +36,7 @@ public class GameMapService {
   private static final int MAX_COORDINATE_COUNT = 20_000;
   private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
   private static final double MAX_ERROR_DISTANCE_KM_LIMIT = 20_000;
+  private static final int MAX_DESCRIPTION_LENGTH = 2_000;
   // Limited to formats the JDK's built-in ImageIO can decode (used below to verify the upload is
   // a genuine image, not just a file with a spoofed content-type) — no webp plugin on the classpath.
   private static final Map<String, String> ALLOWED_IMAGE_TYPES = Map.of(
@@ -125,7 +126,7 @@ public class GameMapService {
    * 400) and IOException for storage failures (caller should respond 500).
    */
   public GameMap uploadMap(String name, MultipartFile coordinatesFile, MultipartFile imageFile, User owner,
-      boolean isPublic, Double maxErrorDistanceKm) throws IOException {
+      boolean isPublic, Double maxErrorDistanceKm, String description) throws IOException {
     String trimmedName = name == null ? "" : name.trim();
     if (trimmedName.isEmpty()) {
       throw new IllegalArgumentException("Map name is required");
@@ -137,6 +138,7 @@ public class GameMapService {
       throw new IllegalArgumentException("A preview image is required");
     }
     validateMaxErrorDistance(maxErrorDistanceKm);
+    String trimmedDescription = validateDescription(description);
 
     byte[] coordinatesBytes = coordinatesFile.getBytes();
     validateCoordinates(coordinatesBytes);
@@ -163,6 +165,7 @@ public class GameMapService {
       gameMap.setOwner(owner);
       gameMap.setIsPublic(isPublic);
       gameMap.setMaxErrorDistanceKm(maxErrorDistanceKm);
+      gameMap.setDescription(trimmedDescription);
       return gameMapRepository.save(gameMap);
     } catch (Exception e) {
       Files.deleteIfExists(coordinatesPath);
@@ -175,8 +178,8 @@ public class GameMapService {
    * Partial update — only non-null arguments are applied. Throws AccessDeniedException unless the
    * caller owns the map or holds MANAGE_MAPS (admin override, e.g. for ownerless legacy rows).
    */
-  public GameMap updateMap(Long mapId, String name, Boolean isPublic, Double maxErrorDistanceKm, User currentUser,
-      boolean isAdmin) {
+  public GameMap updateMap(Long mapId, String name, Boolean isPublic, Double maxErrorDistanceKm, String description,
+      User currentUser, boolean isAdmin) {
     GameMap map = getGameMap(mapId);
     if (map == null) {
       return null;
@@ -197,6 +200,9 @@ public class GameMapService {
     if (maxErrorDistanceKm != null) {
       validateMaxErrorDistance(maxErrorDistanceKm);
       map.setMaxErrorDistanceKm(maxErrorDistanceKm);
+    }
+    if (description != null) {
+      map.setDescription(validateDescription(description));
     }
     return gameMapRepository.save(map);
   }
@@ -242,6 +248,14 @@ public class GameMapService {
       throw new IllegalArgumentException(
           "Boundary scale must be between 0 and " + (int) MAX_ERROR_DISTANCE_KM_LIMIT + " km");
     }
+  }
+
+  private String validateDescription(String description) {
+    String trimmed = description == null ? "" : description.trim();
+    if (trimmed.length() > MAX_DESCRIPTION_LENGTH) {
+      throw new IllegalArgumentException("Description is too long (max " + MAX_DESCRIPTION_LENGTH + " characters)");
+    }
+    return trimmed;
   }
 
   private List<LatLng> validateCoordinates(byte[] coordinatesBytes) throws IOException {

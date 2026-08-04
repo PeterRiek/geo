@@ -44,6 +44,7 @@ interface GameMap {
   id: number;
   name: string;
   imageUrl?: string;
+  description?: string;
   ownerUsername?: string;
   isPublic: boolean;
   isOwn: boolean;
@@ -53,6 +54,7 @@ interface GameMap {
 interface EditState {
   map: GameMap;
   name: string;
+  description: string;
   isPublic: boolean;
   maxErrorDistanceKm: number;
   submitting: boolean;
@@ -114,6 +116,7 @@ const MapsLibrary: React.FC = () => {
     setEdit({
       map,
       name: map.name,
+      description: map.description ?? "",
       isPublic: map.isPublic,
       maxErrorDistanceKm: map.maxErrorDistanceKm,
       submitting: false,
@@ -130,6 +133,7 @@ const MapsLibrary: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: edit.name.trim(),
+          description: edit.description.trim(),
           isPublic: edit.isPublic,
           maxErrorDistanceKm: edit.maxErrorDistanceKm,
         }),
@@ -345,6 +349,16 @@ const MapsLibrary: React.FC = () => {
                   </Tooltip>
                 )}
               </Stack>
+              {map.description && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  noWrap
+                  sx={{ mb: (map.isOwn || map.ownerUsername) ? 0.5 : 0 }}
+                >
+                  {map.description}
+                </Typography>
+              )}
               {(map.isOwn || map.ownerUsername) && (
                 <Stack direction="row" spacing={0.5} alignItems="center">
                   <PersonIcon fontSize="inherit" color="action" />
@@ -368,6 +382,14 @@ const MapsLibrary: React.FC = () => {
               onChange={(e) => edit && setEdit({ ...edit, name: e.target.value })}
               fullWidth
               required
+            />
+            <TextField
+              label="Description"
+              value={edit?.description ?? ""}
+              onChange={(e) => edit && setEdit({ ...edit, description: e.target.value })}
+              multiline
+              minRows={2}
+              fullWidth
             />
             <TextField
               label="Boundary scale (max error distance, km)"

@@ -16,6 +16,7 @@ public class GameMapDto {
   private final Long id;
   private final String name;
   private final String imageUrl;
+  private final String description;
   private final String ownerUsername;
   private final boolean isPublic;
   private final boolean isOwn;
@@ -25,6 +26,7 @@ public class GameMapDto {
     this.id = map.getId();
     this.name = map.getName();
     this.imageUrl = map.getImageUrl();
+    this.description = map.getDescription() != null ? map.getDescription() : "";
     this.ownerUsername = map.getOwner() != null ? map.getOwner().getUsername() : null;
     this.isPublic = map.getIsPublic() == null || map.getIsPublic();
     this.isOwn = map.getOwner() != null && currentUser != null
@@ -44,6 +46,10 @@ public class GameMapDto {
 
   public String getImageUrl() {
     return imageUrl;
+  }
+
+  public String getDescription() {
+    return description;
   }
 
   public String getOwnerUsername() {

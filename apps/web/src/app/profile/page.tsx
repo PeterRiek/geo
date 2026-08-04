@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Alert,
   Avatar,
+  Box,
   Button,
   Container,
   Dialog,
@@ -17,6 +18,7 @@ import {
   Stack,
   Tab,
   Tabs,
+  TextField,
   Typography,
 } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
@@ -50,12 +52,20 @@ const ProfilePage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameSaving, setUsernameSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const [usernameSaved, setUsernameSaved] = useState(false);
 
   useEffect(() => {
     const init = async () => {
       setLoading(true);
       const resMe = await fetch("/api/user/me");
-      if (resMe.ok) setData(await resMe.json());
+      if (resMe.ok) {
+        const me = await resMe.json();
+        setData(me);
+        setUsername(me.username);
+      }
 
       const resCanPlay = await fetch("/api/user/can-play");
       if (resCanPlay.ok) setCanPlay(await resCanPlay.json());
@@ -64,6 +74,44 @@ const ProfilePage = () => {
     };
     init();
   }, []);
+
+  const openEdit = () => {
+    setUsername(data?.username ?? "");
+    setUsernameError("");
+    setUsernameSaved(false);
+    setEditOpen(true);
+  };
+
+  const handleSaveUsername = async () => {
+    const trimmed = username.trim();
+    if (!trimmed || trimmed === data?.username) return;
+
+    setUsernameSaving(true);
+    setUsernameError("");
+    setUsernameSaved(false);
+    try {
+      const res = await fetch("/api/user/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: trimmed }),
+      });
+      const body = await res.json().catch(() => undefined);
+
+      if (!res.ok) {
+        setUsernameError(body?.error ?? "Failed to update username.");
+        return;
+      }
+
+      setData((prev) => (prev ? { ...prev, username: body.username } : prev));
+      setUsername(body.username);
+      setUsernameSaved(true);
+      router.refresh();
+    } catch {
+      setUsernameError("Failed to update username. Check your connection and try again.");
+    } finally {
+      setUsernameSaving(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
@@ -159,7 +207,7 @@ const ProfilePage = () => {
           <Divider sx={{ my: 2 }} />
 
           <Stack spacing={1}>
-            <Button onClick={() => setEditOpen(true)} startIcon={<EditIcon />}>
+            <Button onClick={openEdit} startIcon={<EditIcon />}>
               Edit Profile
             </Button>
             <SignOutButton />
@@ -170,21 +218,48 @@ const ProfilePage = () => {
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>Edit Profile</DialogTitle>
         <DialogContent>
-          <Typography variant="subtitle2" color="error" sx={{ mb: 1 }}>
-            Danger zone
-          </Typography>
-          <Button
-            onClick={() => setDeleteDialogOpen(true)}
-            color="error"
-            variant="outlined"
-            startIcon={<DeleteForeverIcon />}
-            fullWidth
-          >
-            Delete Account
-          </Button>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Username"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setUsernameSaved(false);
+              }}
+              fullWidth
+              required
+            />
+            {usernameError && <Alert severity="error">{usernameError}</Alert>}
+            {usernameSaved && <Alert severity="success">Username updated.</Alert>}
+
+            <Divider />
+
+            <Box>
+              <Typography variant="subtitle2" color="error" sx={{ mb: 1 }}>
+                Danger zone
+              </Typography>
+              <Button
+                onClick={() => setDeleteDialogOpen(true)}
+                color="error"
+                variant="outlined"
+                startIcon={<DeleteForeverIcon />}
+                fullWidth
+              >
+                Delete Account
+              </Button>
+            </Box>
+          </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditOpen(false)}>Close</Button>
+          <Button onClick={() => setEditOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleSaveUsername}
+            variant="contained"
+            loading={usernameSaving}
+            disabled={!username.trim() || username.trim() === data?.username}
+          >
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
 
