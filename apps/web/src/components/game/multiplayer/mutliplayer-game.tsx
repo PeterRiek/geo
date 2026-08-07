@@ -44,18 +44,18 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const roomId = useMemo(() => searchParams.get("roomId"), [searchParams]);
   // load searchparam.roomId into useMultiplaerSocker
 
-  const { gameState, connectionStatus, join, setReady, submitGuess, reconnect } = useGameSocket(
-    roomId ?? "default",
-    accessToken
-  );
+  const { gameState, connectionStatus, join, setReady, submitGuess, reconnect, clockOffset } =
+    useGameSocket(roomId ?? "default", accessToken);
 
   const secondsLeft = useCountdown(
-    gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined
+    gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined,
+    clockOffset
   );
   const readySecondsLeft = useCountdown(
     gameState?.roomPhase === "WAITING" || gameState?.roomPhase === "ROUND_RESULTS"
       ? gameState.readyDeadline
-      : undefined
+      : undefined,
+    clockOffset
   );
   const amReady = gameState?.readyPlayers?.includes(username) ?? false;
 
@@ -181,17 +181,22 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined;
     if (!roundEndsAt) return;
 
-    const msRemaining = roundEndsAt - Date.now();
+    // Correct for the local clock's skew relative to the server's (see use-countdown.ts) — without
+    // this, a client whose clock runs ahead would fire this early relative to the actual server
+    // deadline, submitting (and ending the round for that player) before their own countdown UI,
+    // and the other player's, reach zero.
+    const msRemaining = roundEndsAt - (Date.now() + clockOffset);
     const timeout = setTimeout(() => {
       if (roundFinishedRef.current || !guessLocationRef.current) return;
       submitGuess(guessLocationRef.current);
       setRoundFinished(true);
     }, Math.max(0, msRemaining));
     return () => clearTimeout(timeout);
-    // Only re-schedule when the deadline itself changes — the timeout body reads the refs above
-    // instead of closing over state, so it doesn't need onGuess/roundFinished/guessLocation here.
+    // Only re-schedule when the deadline or clock-offset estimate changes — the timeout body reads
+    // the refs above instead of closing over state, so it doesn't need
+    // onGuess/roundFinished/guessLocation here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.roundEndsAt, gameState?.roomPhase]);
+  }, [gameState?.roundEndsAt, gameState?.roomPhase, clockOffset]);
 
   const copyWithFallback = (text: string): boolean => {
     const textarea = document.createElement("textarea");

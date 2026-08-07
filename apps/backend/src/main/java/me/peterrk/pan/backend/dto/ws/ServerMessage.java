@@ -11,5 +11,8 @@ public class ServerMessage {
   public ServerMessage(String type, Object payload) {
     this.type = type;
     this.payload = payload;
+    if (payload instanceof RoomState roomState) {
+      roomState.serverTime = System.currentTimeMillis();
+    }
   }
 }

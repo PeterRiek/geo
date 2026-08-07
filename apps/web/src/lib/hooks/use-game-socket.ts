@@ -30,6 +30,7 @@ interface GameState {
   disconnectedPlayers?: string[];
   readyPlayers?: string[];
   readyDeadline?: number;
+  serverTime?: number;
 }
 
 export type ConnectionStatus = "connecting" | "open" | "closed" | "error";
@@ -37,6 +38,9 @@ export type ConnectionStatus = "connecting" | "open" | "closed" | "error";
 const useGameSocket = (roomId?: string, accessToken?: string) => {
   const socketRef = useRef<WebSocket | null>(null);
   const pendingMessagesRef = useRef<string[]>([]);
+  // serverTime-on-arrival minus our own Date.now() — added to Date.now() elsewhere to approximate
+  // the server's clock, so countdowns/auto-submit aren't thrown off by the client's own clock skew.
+  const clockOffsetRef = useRef(0);
   const [gameState, setGameState] = useState<GameState>();
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
   const [reconnectKey, setReconnectKey] = useState(0);
@@ -88,27 +92,33 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     ws.onmessage = (event) => {
       if (!isCurrent()) return;
       const message = JSON.parse(event.data);
+      const applyGameState = (payload: GameState) => {
+        if (payload.serverTime) {
+          clockOffsetRef.current = payload.serverTime - Date.now();
+        }
+        setGameState(payload);
+      };
       switch (message.type) {
         case "JOINED_ROOM":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "ROUND_STARTED":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "ROUND_RESULTS":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "GAME_RESULTS":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "GUESS_SUBMITTED":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "PLAYER_STATUS":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "READY_STATUS":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "CREATED_ROOM":
           setCreatedRoomId(message.payload.roomId);
@@ -160,6 +170,7 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     connectionStatus,
     createdRoomId,
     roomError,
+    clockOffset: clockOffsetRef.current,
     join,
     createRoom,
     setReady,

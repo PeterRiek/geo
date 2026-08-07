@@ -21,7 +21,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") ?? undefined;
 
-  const { gameState, connectionStatus, join, submitGuess, nextRound, reconnect, roomError } =
+  const { gameState, connectionStatus, join, submitGuess, nextRound, reconnect, roomError, clockOffset } =
     useGameSocket(sessionId, accessToken);
 
   const theme = useTheme();
@@ -42,7 +42,8 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   roundFinishedRef.current = roundFinished;
 
   const secondsLeft = useCountdown(
-    gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined
+    gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined,
+    clockOffset
   );
 
   useEffect(() => {
@@ -111,17 +112,21 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
       gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined;
     if (!roundEndsAt) return;
 
-    const msRemaining = roundEndsAt - Date.now();
+    // Correct for the local clock's skew relative to the server's (see use-countdown.ts) — without
+    // this, a client whose clock runs ahead would fire this early relative to the actual server
+    // deadline.
+    const msRemaining = roundEndsAt - (Date.now() + clockOffset);
     const timeout = setTimeout(() => {
       if (roundFinishedRef.current || !guessLocationRef.current) return;
       submitGuess(guessLocationRef.current);
       setRoundFinished(true);
     }, Math.max(0, msRemaining));
     return () => clearTimeout(timeout);
-    // Only re-schedule when the deadline itself changes — the timeout body reads the refs above
-    // instead of closing over state, so it doesn't need onGuess/roundFinished/guessLocation here.
+    // Only re-schedule when the deadline or clock-offset estimate changes — the timeout body reads
+    // the refs above instead of closing over state, so it doesn't need
+    // onGuess/roundFinished/guessLocation here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.roundEndsAt, gameState?.roomPhase]);
+  }, [gameState?.roundEndsAt, gameState?.roomPhase, clockOffset]);
 
   let content: React.ReactNode;
   let phaseKey: string;
