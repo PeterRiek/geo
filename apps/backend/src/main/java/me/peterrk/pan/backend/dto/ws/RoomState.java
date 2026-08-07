@@ -1,10 +1,13 @@
 package me.peterrk.pan.backend.dto.ws;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import me.peterrk.pan.backend.dto.GameSettings;
 
@@ -45,4 +48,11 @@ public class RoomState {
   // readyDeadline for their own clock skew instead of comparing a server timestamp against a
   // possibly-drifted local clock. Stamped in ServerMessage's constructor, not here.
   public Long serverTime;
+
+  // Pin placements for the current round from players who haven't hit submit yet — updated live via
+  // PIN_MOVED, reset each round in GameService#beginRound. Used only so a round timeout can submit
+  // whatever pin was last placed instead of scoring the player as a miss; never sent to clients (that
+  // would reveal a player's still-movable pin to everyone before they've committed to it).
+  @JsonIgnore
+  public Map<String, LatLng> pendingGuesses = new HashMap<>();
 }

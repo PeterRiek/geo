@@ -165,6 +165,15 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     send({ type: "GUESS", roomId, payload: guess });
   };
 
+  // Best-effort: lets the server fall back to this pin if the round times out before the player
+  // hits submit (see GameService#updatePendingGuess). Not queued like `send` — if the socket isn't
+  // open right now there's no point replaying a stale pin position once it reconnects.
+  const movePin = (pos: Coords) => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: "PIN_MOVED", roomId, payload: pos }));
+    }
+  };
+
   return {
     gameState,
     connectionStatus,
@@ -176,6 +185,7 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     setReady,
     nextRound,
     submitGuess,
+    movePin,
     reconnect,
   };
 };
