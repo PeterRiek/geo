@@ -40,4 +40,9 @@ public class RoomState {
   public Set<String> readyPlayers = new HashSet<>();
   // Epoch millis the current gate's failsafe force-advances the room regardless of ready state.
   public Long readyDeadline;
+
+  // Epoch millis on the server when this state was sent — lets clients correct roundEndsAt/
+  // readyDeadline for their own clock skew instead of comparing a server timestamp against a
+  // possibly-drifted local clock. Stamped in ServerMessage's constructor, not here.
+  public Long serverTime;
 }
