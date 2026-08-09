@@ -17,7 +17,7 @@ services:
       retries: 10
 
   backend:
-    image: ghcr.io/${IMAGE_NAME:-peterriek/geoguessr-clone}-backend:latest
+    image: ghcr.io/${IMAGE_NAME:-peterriek/geo}-backend:latest
     pull_policy: always
     restart: unless-stopped
     depends_on:
@@ -46,7 +46,7 @@ services:
     # Actions workflow (see .github/workflows/deploy.yml), not here — changing
     # them means updating the "prd" environment's variables/secrets in GitHub
     # and pushing, not editing this file or the deploy-host .env.
-    image: ghcr.io/${IMAGE_NAME:-peterriek/geoguessr-clone}-web:latest
+    image: ghcr.io/${IMAGE_NAME:-peterriek/geo}-web:latest
     pull_policy: always
     restart: unless-stopped
     depends_on:
