@@ -21,8 +21,17 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") ?? undefined;
 
-  const { gameState, connectionStatus, join, submitGuess, nextRound, reconnect, roomError, clockOffset } =
-    useGameSocket(sessionId, accessToken);
+  const {
+    gameState,
+    connectionStatus,
+    join,
+    submitGuess,
+    movePin,
+    nextRound,
+    reconnect,
+    roomError,
+    clockOffset,
+  } = useGameSocket(sessionId, accessToken);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -93,6 +102,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const onMapClick = (pos: Coords) => {
     if (roundFinished) return;
     setGuessLocation(pos);
+    movePin(pos);
   };
 
   const onGuess = () => {

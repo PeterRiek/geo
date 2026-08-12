@@ -77,6 +77,14 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
       }
 
+      // Fire-and-forget: tracks where the player's pin currently sits before they submit, purely so
+      // a round timeout can fall back to it (see GameService#resolveExpiredRounds). Not acknowledged
+      // and never broadcast — unlike GUESS it doesn't change any state clients need to see.
+      case "PIN_MOVED" -> {
+        LatLng pos = mapper.convertValue(msg.payload, LatLng.class);
+        gameService.updatePendingGuess(msg.roomId, username, pos);
+      }
+
       case "READY" -> {
         Boolean ready = mapper.convertValue(msg.payload, Boolean.class);
         if (!gameService.setReady(msg.roomId, username, ready)) {

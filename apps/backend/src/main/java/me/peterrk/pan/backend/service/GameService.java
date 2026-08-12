@@ -160,6 +160,28 @@ public class GameService {
   }
 
   /**
+   * Records where a player's pin currently sits before they've hit submit, so a round timeout can
+   * fall back to it instead of scoring them as a miss (see {@link #resolveExpiredRounds}). Silently
+   * ignored once the round has moved on or the player already submitted — a late PIN_MOVED racing
+   * the round boundary should never resurrect a stale pending pin for the next round.
+   */
+  public void updatePendingGuess(String roomId, String username, LatLng pos) {
+    RoomState room = rooms.get(roomId);
+    if (room == null) {
+      return;
+    }
+    synchronized (room) {
+      if (room.roomPhase != RoomState.RoomPhase.ROUND_IN_PROGRESS) {
+        return;
+      }
+      if (currentRoundGuesses(room).containsKey(username)) {
+        return;
+      }
+      room.pendingGuesses.put(username, pos);
+    }
+  }
+
+  /**
    * Must be called while holding `synchronized (room)`. One-way, monotonically-decreasing clamp:
    * never extends roundEndsAt, so reapplying on later guesses in the same round is a harmless
    * no-op once already clamped. No broadcast of its own — the caller's existing broadcast (either
@@ -190,9 +212,11 @@ public class GameService {
             || now < room.roundEndsAt) {
           continue;
         }
+        // Timeout: whoever hasn't submitted is resolved with the last pin they placed (null if
+        // they never placed one at all), rather than being scored as a miss outright.
         Map<String, LatLng> currentGuesses = currentRoundGuesses(room);
         for (String player : room.players) {
-          currentGuesses.putIfAbsent(player, null);
+          currentGuesses.putIfAbsent(player, room.pendingGuesses.get(player));
         }
         advanceIfComplete(room);
       }
@@ -422,6 +446,7 @@ public class GameService {
     room.allTargets.add(getRandomTarget(room.roomSettings.mapId));
     room.allGuesses = new ArrayList<Map<String, LatLng>>();
     room.roundEndsAt = computeRoundEndsAt(room.roomSettings.roundTimeLimitSeconds);
+    room.pendingGuesses = new HashMap<>();
   }
 
   // null means unlimited — the round timeout scheduler and client countdown both already treat a
