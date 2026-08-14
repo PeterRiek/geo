@@ -76,7 +76,7 @@ const InGameMenu: React.FC<Props> = ({ onForfeit }) => {
         <DialogTitle>Forfeit game?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            This will end the game right away and take you to the results screen. This can&apos;t be undone.
+            This will end the game for you right away and take you back to the main menu. This can&apos;t be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

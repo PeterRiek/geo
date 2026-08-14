@@ -25,7 +25,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import InGameView from "../singleplayer/views/ingame-view";
 import RoundResultView from "../singleplayer/views/round-result-view";
 import { getCenterCoords } from "@/lib/geo";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PostgameView from "../singleplayer/views/postgame-view";
 import GameFallback from "@/components/game/game-fallback";
 import ConnectionBanner from "@/components/game/connection-banner";
@@ -40,6 +40,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
   username,
 }) => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const roomId = useMemo(() => searchParams.get("roomId"), [searchParams]);
   // load searchparam.roomId into useMultiplaerSocker
@@ -72,6 +73,10 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const [guessNotification, setGuessNotification] = useState<string>();
   const seenGuessersRef = useRef<Set<string>>(new Set());
   const trackedRoundRef = useRef<number | undefined>(undefined);
+  const [forfeitNotification, setForfeitNotification] = useState<string>();
+  const seenInactiveRef = useRef<Set<string>>(new Set());
+  const inactiveInitializedRef = useRef(false);
+  const amForfeited = gameState?.inactivePlayers?.includes(username) ?? false;
 
   // Mirrors of the two states above, kept fresh every render — the deadline-triggered auto-submit
   // below schedules its setTimeout once per round rather than every render, so it can't rely on a
@@ -107,6 +112,30 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
     }
     seenGuessersRef.current = currentGuessers;
   }, [gameState, username]);
+
+  useEffect(() => {
+    if (!gameState) return;
+    const currentInactive = new Set(gameState.inactivePlayers ?? []);
+
+    if (!inactiveInitializedRef.current) {
+      inactiveInitializedRef.current = true;
+      seenInactiveRef.current = currentInactive;
+      return;
+    }
+
+    for (const player of currentInactive) {
+      if (player !== username && !seenInactiveRef.current.has(player)) {
+        setForfeitNotification(`${player} has forfeited`);
+      }
+    }
+    seenInactiveRef.current = currentInactive;
+  }, [gameState, username]);
+
+  useEffect(() => {
+    if (amForfeited) {
+      router.push("/game");
+    }
+  }, [amForfeited, router]);
 
   const startRound = () => {
     setGuessLocation(undefined);
@@ -347,6 +376,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {gameState.players?.map((player) => {
+                const forfeited = gameState.inactivePlayers?.includes(player);
                 const disconnected = gameState.disconnectedPlayers?.includes(player);
                 const ready = gameState.readyPlayers?.includes(player);
                 return (
@@ -354,18 +384,26 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
                     key={player}
                     label={
                       (player === username ? `${player} (you)` : player) +
-                      (disconnected ? " – disconnected" : ready ? " – ready" : "")
+                      (forfeited
+                        ? " – forfeited"
+                        : disconnected
+                          ? " – disconnected"
+                          : ready
+                            ? " – ready"
+                            : "")
                     }
                     color={
-                      disconnected
-                        ? "default"
-                        : ready
-                          ? "success"
-                          : player === username
-                            ? "primary"
-                            : "default"
+                      forfeited
+                        ? "error"
+                        : disconnected
+                          ? "default"
+                          : ready
+                            ? "success"
+                            : player === username
+                              ? "primary"
+                              : "default"
                     }
-                    sx={disconnected ? { opacity: 0.5 } : undefined}
+                    sx={forfeited || disconnected ? { opacity: 0.5 } : undefined}
                   />
                 );
               })}
@@ -545,6 +583,19 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         <Chip
           label={guessNotification}
           sx={{ bgcolor: "rgba(0,0,0,0.6)", color: "#fff", fontWeight: 500 }}
+        />
+      </Snackbar>
+      <Snackbar
+        open={!!forfeitNotification}
+        autoHideDuration={3000}
+        onClose={() => setForfeitNotification(undefined)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        sx={{ top: { xs: 72, sm: 24 } }}
+      >
+        <Chip
+          label={forfeitNotification}
+          color="error"
+          sx={{ fontWeight: 500 }}
         />
       </Snackbar>
     </Box>

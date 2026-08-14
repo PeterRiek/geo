@@ -28,6 +28,7 @@ interface GameState {
   players: string[];
   roundEndsAt?: number;
   disconnectedPlayers?: string[];
+  inactivePlayers?: string[];
   readyPlayers?: string[];
   readyDeadline?: number;
   serverTime?: number;
@@ -131,6 +132,9 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
           break;
         case "MAP_NOT_ACCESSIBLE":
           setRoomError("That map isn't available to you anymore. Pick another one.");
+          break;
+        case "FORFEITED":
+          setRoomError("You have forfeited this game.");
           break;
       }
     };
