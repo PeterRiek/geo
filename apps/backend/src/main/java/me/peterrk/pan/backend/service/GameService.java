@@ -34,9 +34,6 @@ public class GameService {
   private static final int MAX_ROUND_TIME_LIMIT_SECONDS = 300;
   private static final int DEFAULT_ROUND_TIME_LIMIT_SECONDS = 60;
   private static final long TIME_PRESSURE_REMAINING_MS = 10_000;
-  // Floor for the WAITING-phase ready gate only — a lone straggler left mid-game must still be
-  // able to ready-up (or hit the between-rounds failsafe) alone, so this is NOT applied to the
-  // ROUND_RESULTS gate. See #maybeAdvance and #resolveExpiredReadyChecks.
   private static final int MIN_PLAYERS_TO_START = 2;
   private static final long READY_CHECK_COUNTDOWN_MS = 60_000;
 
@@ -149,7 +146,7 @@ public class GameService {
       return false;
     }
     synchronized (room) {
-      if (room.roomPhase != RoomState.RoomPhase.ROUND_IN_PROGRESS) {
+      if (room.roomPhase != RoomState.RoomPhase.ROUND_IN_PROGRESS || room.inactivePlayers.contains(username)) {
         return false;
       }
       recordGuess(room, username, guess);
@@ -277,9 +274,7 @@ public class GameService {
    */
   private void advanceIfComplete(RoomState room) {
     Map<String, LatLng> currentGuesses = currentRoundGuesses(room);
-    // Forfeited players never submit again, so a round only waits on whoever's still active —
-    // otherwise a forfeit mid-round would stall it until the timeout scheduler bails it out.
-    if (currentGuesses.size() < activePlayers(room).size()) {
+    if (!currentGuesses.keySet().containsAll(activePlayers(room))) {
       broadcast(room.roomId, new ServerMessage("GUESS_SUBMITTED", room));
       return;
     }

@@ -2,7 +2,7 @@
 
 import { Coords } from "@/types/geo";
 import { Fade, useMediaQuery, useTheme } from "@mui/material";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { getCenterCoords } from "@/lib/geo";
 import RoundResultView from "@/components/game/singleplayer/views/round-result-view";
@@ -18,6 +18,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
   username,
 }) => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") ?? undefined;
 
@@ -59,6 +60,13 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
   useEffect(() => {
     phaseContainerRef.current?.focus();
   }, [gameState?.roomPhase, gameState?.roundCount]);
+
+  const amForfeited = gameState?.inactivePlayers?.includes(username) ?? false;
+  useEffect(() => {
+    if (amForfeited) {
+      router.push("/game");
+    }
+  }, [amForfeited, router]);
 
   const initRound = () => {
     if (!gameState) return;
