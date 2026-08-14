@@ -1,12 +1,10 @@
 package me.peterrk.pan.backend.config;
 
-import me.peterrk.pan.backend.service.DuelGameService;
+import me.peterrk.pan.backend.service.GameService;
 import me.peterrk.pan.backend.util.JwtUtil;
 import me.peterrk.pan.backend.websocket.JwtHandshakeInterceptor;
-import me.peterrk.pan.backend.websocket.DuelWebSocketHandler;
-import me.peterrk.pan.backend.websocket.EchoWebSocketHandler;
+import me.peterrk.pan.backend.websocket.GameWebSocketHandler;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -16,19 +14,17 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
-  @Autowired
-  private JwtUtil jwtUtil;
+  private final JwtUtil jwtUtil;
+  private final GameService gameService;
 
-  @Autowired
-  private DuelGameService duelGameService;
+  public WebSocketConfig(JwtUtil jwtUtil, GameService gameService) {
+    this.jwtUtil = jwtUtil;
+    this.gameService = gameService;
+  }
 
   @Override
   public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-    registry.addHandler(new EchoWebSocketHandler(), "/ws/echo")
-        .addInterceptors(new JwtHandshakeInterceptor(jwtUtil))
-        .setAllowedOrigins("*");
-
-    registry.addHandler(new DuelWebSocketHandler(duelGameService), "/ws/duel")
+    registry.addHandler(new GameWebSocketHandler(gameService), "/ws/game")
         .addInterceptors(new JwtHandshakeInterceptor(jwtUtil))
         .setAllowedOrigins("*");
   }

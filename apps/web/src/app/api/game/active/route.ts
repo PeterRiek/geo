@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
-export async function POST() {
+export async function GET() {
   const session = await auth();
 
   try {
-    const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gamesession`, {
-      method: "POST",
+    const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/game/active`, {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
         "Content-Type": "application/json",
       },
     });
+
+    if (backendRes.status === 204) {
+      return new NextResponse(null, { status: 204 });
+    }
 
     const data = await backendRes.json();
 

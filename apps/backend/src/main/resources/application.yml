@@ -6,7 +6,20 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 server:
   port: ${PORT:8080}
 jwt:
   secret: ${JWT_SECRET:ChangeThisJWTSecret!_YourSecretIsNotSafeUntilYouReplaceMe_1234567890abcdef}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+app:
+  uploads:
+    dir: ${UPLOADS_DIR:uploads}
+  game:
+    daily-limit: ${DAILY_GAME_LIMIT:5}
+  admin:
+    username: ${ADMIN_USERNAME:admin}
+    password: ${ADMIN_PASSWORD:}

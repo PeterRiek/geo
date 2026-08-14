@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 
-const protectedRoutes = ["/profile", "/game"];
+const protectedRoutes = ["/profile", "/game", "/history", "/admin"];
 
 interface CanPlayResponse {
   canPlay: boolean;
@@ -70,7 +70,16 @@ const middleware = async (request: NextRequest) => {
     pathname.endsWith(".css") ||
     pathname.endsWith(".ico");
 
-  if (!pathname.startsWith("/server-starting") && !isStaticAsset) {
+  // These are the middleware's own bail-out destinations below — none of them
+  // need (or can survive) the backend being reachable, so re-checking on the
+  // redirect target itself would just redirect right back to itself forever.
+  const isHealthCheckExempt =
+    pathname.startsWith("/server-starting") ||
+    pathname.startsWith("/error") ||
+    pathname.startsWith("/session-expired") ||
+    pathname.startsWith("/limit-reached");
+
+  if (!isHealthCheckExempt && !isStaticAsset) {
     const outcome = await checkServerStatus();
 
     if (outcome === "starting") {
@@ -102,8 +111,11 @@ const middleware = async (request: NextRequest) => {
       clearTimeout(timeout);
 
       if (res.status === 401) {
+        // JwtAuthFilter returns one of three distinct messages for an expired token, an
+        // undecodable/malformed one, or one that no longer matches the user — all three mean the
+        // same thing to the frontend: re-authenticate.
         const errorData = await res.json();
-        if (errorData.error === "JWT token expired") {
+        if (typeof errorData.error === "string" && errorData.error.startsWith("JWT token")) {
           return NextResponse.redirect(new URL("/session-expired", request.url));
         }
         return NextResponse.redirect(new URL("/error", request.url));

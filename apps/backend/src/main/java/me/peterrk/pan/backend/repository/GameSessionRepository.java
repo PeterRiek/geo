@@ -1,17 +1,17 @@
 package me.peterrk.pan.backend.repository;
 
+import java.util.List;
+
 import me.peterrk.pan.backend.model.GameSession;
-import me.peterrk.pan.backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-
 @Repository
 public interface GameSessionRepository extends JpaRepository<GameSession, Long> {
 
-  @Query("SELECT COUNT(gs) FROM GameSession gs WHERE gs.user = :user AND gs.playedAt >= :startOfDay AND gs.playedAt < :startOfNextDay")
-  int countTodayByUser(User user, LocalDateTime startOfDay, LocalDateTime startOfNextDay);
-
+  // Every row here is already a completed game (GameHistoryService only persists on finish), so a
+  // plain count-per-mapId is exactly "times played to completion" — no finishedAt filter needed.
+  @Query("SELECT s.mapId, COUNT(s) FROM GameSession s WHERE s.mapId IS NOT NULL GROUP BY s.mapId")
+  List<Object[]> countSessionsByMapId();
 }

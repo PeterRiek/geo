@@ -6,7 +6,9 @@ import React, { useEffect, useRef } from "react";
 
 interface SummaryMapProps {
   guessLocation?: Coords;
-  otherGuesses?: Coords[];
+  // A timed-out player's guess comes through as null (server-side "no
+  // guess" marker), so callers may pass that straight through un-filtered.
+  otherGuesses?: (Coords | null | undefined)[];
   targetLocation: Coords;
   center?: Coords;
   zoom?: number;
@@ -33,6 +35,10 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
   const lineRef = useRef<google.maps.Polyline[]>([]);
 
   useEffect(() => {
+    // Guards a superseded run's rejection from firing handleMapsError() after
+    // a newer effect run (e.g. rapid round changes) already succeeded.
+    let cancelled = false;
+
     const initMap = async () => {
       installMapsAuthFailureHandler();
 
@@ -89,6 +95,7 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
 
       otherMarkerRefs.current = [];
       otherGuesses?.forEach((position) => {
+        if (!position) return;
         otherMarkerRefs.current?.push(
           new AdvancedMarkerElement({
             map,
@@ -112,12 +119,20 @@ const SummaryMap: React.FC<SummaryMapProps> = ({
       });
     };
 
-    initMap().catch(() => handleMapsError());
-    // otherGuesses is passed as a new array literal on every render by callers
-    // (e.g. postgame-view), so depending on it would recreate the map/markers
-    // on every render instead of only when the shown round changes.
+    initMap().catch(() => {
+      if (!cancelled) handleMapsError();
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // Depend on primitive lat/lng values, not the center/guessLocation/targetLocation
+    // objects themselves — callers (e.g. round-result-view) recompute those as new
+    // object literals on every render, which would otherwise tear down and rebuild
+    // the whole map on any unrelated parent re-render.
+    // otherGuesses is excluded for the same reason (new array literal every render).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, zoom, guessLocation, targetLocation]);
+  }, [center?.lat, center?.lng, zoom, guessLocation?.lat, guessLocation?.lng, targetLocation.lat, targetLocation.lng]);
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
 };

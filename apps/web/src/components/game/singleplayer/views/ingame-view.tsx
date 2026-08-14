@@ -3,6 +3,8 @@ import GuessrMobileUI from "@/components/game/guessing-ui-mobile";
 import GuessrUI from "@/components/game/guessing-ui";
 import StreetViewPano from "@/components/game/street-view-pano";
 import RoundHud from "@/components/game/round-hud";
+import CountdownOverlay from "@/components/game/countdown-overlay";
+import InGameMenu from "@/components/game/in-game-menu";
 import { Coords } from "@/types/geo";
 
 interface Props {
@@ -14,11 +16,13 @@ interface Props {
   guessingDisabled?: boolean;
   onMapClick: (pos: Coords) => void;
   onGuess: () => void;
+  onForfeit: () => void;
   moveEnabled?: boolean;
   panEnabled?: boolean;
   zoomEnabled?: boolean;
   round?: number;
   totalRounds?: number;
+  secondsLeft?: number;
 }
 
 const InGameView: React.FC<Props> = ({
@@ -30,23 +34,26 @@ const InGameView: React.FC<Props> = ({
   guessingDisabled,
   onMapClick,
   onGuess,
+  onForfeit,
   moveEnabled,
   panEnabled,
   zoomEnabled,
   round,
   totalRounds,
+  secondsLeft,
 }) => {
   const buttonLabel = roundFinished
     ? "DONE"
-    : guessLocation
-    ? "GUESS"
-    : "PLACE YOUR PIN";
+    : "GUESS";
 
   return (
     <>
       <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
         {round !== undefined && totalRounds !== undefined && (
-          <RoundHud round={round} totalRounds={totalRounds} />
+          <RoundHud round={round} totalRounds={totalRounds} secondsLeft={secondsLeft} />
+        )}
+        {secondsLeft !== undefined && secondsLeft > 0 && secondsLeft <= 5 && (
+          <CountdownOverlay secondsLeft={secondsLeft} />
         )}
         <StreetViewPano
           location={targetLocation}
@@ -54,6 +61,7 @@ const InGameView: React.FC<Props> = ({
           panEnabled={panEnabled}
           zoomEnabled={zoomEnabled}
         />
+        <InGameMenu onForfeit={onForfeit} />
       </Box>
       {isMobile ? (
         <GuessrMobileUI

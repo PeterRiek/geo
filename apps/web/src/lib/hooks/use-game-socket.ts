@@ -3,12 +3,17 @@
 import { Coords } from "@/types/geo";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+export type GameMode = "SINGLEPLAYER" | "MULTIPLAYER";
+
 interface GameSettings {
   mapId: number;
   allowMove: boolean;
   allowPan: boolean;
   allowZoom: boolean;
   roundCount: number;
+  roundTimeLimitSeconds: number;
+  gameMode: GameMode;
+  timePressure?: boolean;
 }
 
 interface GameState {
@@ -18,14 +23,25 @@ interface GameState {
   roomSettings: GameSettings;
   allTargets: Coords[];
   allGuesses: { [username: string]: Coords }[];
+  allDistances: { [username: string]: number | null }[];
+  allScores: { [username: string]: number }[];
   players: string[];
+  roundEndsAt?: number;
+  disconnectedPlayers?: string[];
+  inactivePlayers?: string[];
+  readyPlayers?: string[];
+  readyDeadline?: number;
+  serverTime?: number;
 }
 
 export type ConnectionStatus = "connecting" | "open" | "closed" | "error";
 
-const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
+const useGameSocket = (roomId?: string, accessToken?: string) => {
   const socketRef = useRef<WebSocket | null>(null);
   const pendingMessagesRef = useRef<string[]>([]);
+  // serverTime-on-arrival minus our own Date.now() — added to Date.now() elsewhere to approximate
+  // the server's clock, so countdowns/auto-submit aren't thrown off by the client's own clock skew.
+  const clockOffsetRef = useRef(0);
   const [gameState, setGameState] = useState<GameState>();
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
   const [reconnectKey, setReconnectKey] = useState(0);
@@ -44,11 +60,18 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
   useEffect(() => {
     setConnectionStatus("connecting");
     const ws = new WebSocket(
-      `${process.env.NEXT_PUBLIC_WS_URL}/duel?token=${accessToken}`
+      `${process.env.NEXT_PUBLIC_WS_URL}/game?token=${accessToken}`
     );
     socketRef.current = ws;
 
+    // A stale socket from a superseded effect run (React StrictMode's dev
+    // double-invoke, or a real reconnect) can still fire onclose/onerror
+    // after the *new* socket has already opened — without this guard, that
+    // late event would clobber the current, correct "open" status.
+    const isCurrent = () => socketRef.current === ws;
+
     ws.onopen = () => {
+      if (!isCurrent()) return;
       setConnectionStatus("open");
       if (roomId) {
         pendingMessagesRef.current.push(JSON.stringify({ type: "JOIN", roomId }));
@@ -58,30 +81,45 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
     };
 
     ws.onerror = () => {
+      if (!isCurrent()) return;
       setConnectionStatus("error");
     };
 
     ws.onclose = () => {
+      if (!isCurrent()) return;
       setConnectionStatus("closed");
     };
 
     ws.onmessage = (event) => {
+      if (!isCurrent()) return;
       const message = JSON.parse(event.data);
+      const applyGameState = (payload: GameState) => {
+        if (payload.serverTime) {
+          clockOffsetRef.current = payload.serverTime - Date.now();
+        }
+        setGameState(payload);
+      };
       switch (message.type) {
         case "JOINED_ROOM":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "ROUND_STARTED":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "ROUND_RESULTS":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "GAME_RESULTS":
-          setGameState(message.payload);
+          applyGameState(message.payload);
           break;
         case "GUESS_SUBMITTED":
-          setGameState(message.payload);
+          applyGameState(message.payload);
+          break;
+        case "PLAYER_STATUS":
+          applyGameState(message.payload);
+          break;
+        case "READY_STATUS":
+          applyGameState(message.payload);
           break;
         case "CREATED_ROOM":
           setCreatedRoomId(message.payload.roomId);
@@ -91,6 +129,12 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
           break;
         case "ROOM_NOT_FOUND":
           setRoomError("Room not found.");
+          break;
+        case "MAP_NOT_ACCESSIBLE":
+          setRoomError("That map isn't available to you anymore. Pick another one.");
+          break;
+        case "FORFEITED":
+          setRoomError("You have forfeited this game.");
           break;
       }
     };
@@ -113,16 +157,29 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
     send({ type: "JOIN", roomId });
   };
 
-  const startGame = () => {
-    send({ type: "START_GAME", roomId });
+  const setReady = (ready: boolean) => {
+    send({ type: "READY", roomId, payload: ready });
   };
 
   const nextRound = () => {
     send({ type: "NEXT_ROUND", roomId });
   };
 
+  const forfeit = () => {
+    send({ type: "FORFEIT", roomId });
+  };
+
   const submitGuess = (guess: Coords) => {
     send({ type: "GUESS", roomId, payload: guess });
+  };
+
+  // Best-effort: lets the server fall back to this pin if the round times out before the player
+  // hits submit (see GameService#updatePendingGuess). Not queued like `send` — if the socket isn't
+  // open right now there's no point replaying a stale pin position once it reconnects.
+  const movePin = (pos: Coords) => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: "PIN_MOVED", roomId, payload: pos }));
+    }
   };
 
   return {
@@ -130,13 +187,16 @@ const useMultiplayerSocket = (roomId?: string, accessToken?: string) => {
     connectionStatus,
     createdRoomId,
     roomError,
+    clockOffset: clockOffsetRef.current,
     join,
     createRoom,
-    startGame,
+    setReady,
     nextRound,
     submitGuess,
+    movePin,
     reconnect,
+    forfeit,
   };
 };
 
-export default useMultiplayerSocket;
+export default useGameSocket;

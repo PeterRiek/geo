@@ -15,16 +15,18 @@ import io.jsonwebtoken.security.Keys;
 public class JwtUtil {
 
   private final Key key;
+  private final long expirationMs;
 
-  public JwtUtil(@Value("${jwt.secret}") String secret) {
+  public JwtUtil(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
     this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    this.expirationMs = expirationMs;
   }
 
   public String generateToken(String username) {
     return Jwts.builder()
         .setSubject(username)
         .setIssuedAt(new Date(System.currentTimeMillis()))
-        .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
+        .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
         .signWith(key)
         .compact();
   }

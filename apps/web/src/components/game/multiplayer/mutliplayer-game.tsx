@@ -1,6 +1,7 @@
 "use client";
 
-import useMultiplayerSocket from "@/lib/hooks/use-multiplayer-socket";
+import useGameSocket from "@/lib/hooks/use-game-socket";
+import useCountdown from "@/lib/hooks/use-countdown";
 import { Coords } from "@/types/geo";
 import {
   Alert,
@@ -23,12 +24,13 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import InGameView from "../singleplayer/views/ingame-view";
 import RoundResultView from "../singleplayer/views/round-result-view";
-import { getCenterCoords, getDistanceInKm, getGuessrScore } from "@/lib/geo";
-import { useSearchParams } from "next/navigation";
+import { getCenterCoords } from "@/lib/geo";
+import { useRouter, useSearchParams } from "next/navigation";
 import PostgameView from "../singleplayer/views/postgame-view";
 import GameFallback from "@/components/game/game-fallback";
 import ConnectionBanner from "@/components/game/connection-banner";
 import GameSettingsSummary from "@/components/game/game-settings-summary";
+import { buildGameMenuHref } from "@/lib/game-settings-url";
 
 const MIN_PLAYERS_TO_START = 2;
 
@@ -38,12 +40,25 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   accessToken,
   username,
 }) => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const roomId = useMemo(() => searchParams.get("roomId"), [searchParams]);
   // load searchparam.roomId into useMultiplaerSocker
 
-  const { gameState, connectionStatus, join, startGame, nextRound, submitGuess, reconnect } =
-    useMultiplayerSocket(roomId ?? "default", accessToken);
+  const { gameState, connectionStatus, join, setReady, submitGuess, movePin, reconnect, clockOffset, forfeit } =
+    useGameSocket(roomId ?? "default", accessToken);
+
+  const secondsLeft = useCountdown(
+    gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined,
+    clockOffset
+  );
+  const readySecondsLeft = useCountdown(
+    gameState?.roomPhase === "WAITING" || gameState?.roomPhase === "ROUND_RESULTS"
+      ? gameState.readyDeadline
+      : undefined,
+    clockOffset
+  );
+  const amReady = gameState?.readyPlayers?.includes(username) ?? false;
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -55,10 +70,72 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const [codeCopied, setCodeCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [guessNotification, setGuessNotification] = useState<string>();
+  const seenGuessersRef = useRef<Set<string>>(new Set());
+  const trackedRoundRef = useRef<number | undefined>(undefined);
+  const [forfeitNotification, setForfeitNotification] = useState<string>();
+  const seenInactiveRef = useRef<Set<string>>(new Set());
+  const inactiveInitializedRef = useRef(false);
+  const amForfeited = gameState?.inactivePlayers?.includes(username) ?? false;
+
+  // Mirrors of the two states above, kept fresh every render — the deadline-triggered auto-submit
+  // below schedules its setTimeout once per round rather than every render, so it can't rely on a
+  // closure over guessLocation/roundFinished (that would freeze at whatever they were at round
+  // start); it reads these instead so it always sees the latest pin placement.
+  const guessLocationRef = useRef(guessLocation);
+  guessLocationRef.current = guessLocation;
+  const roundFinishedRef = useRef(roundFinished);
+  roundFinishedRef.current = roundFinished;
 
   useEffect(() => {
     phaseContainerRef.current?.focus();
   }, [gameState?.roomPhase, gameState?.roundCount]);
+
+  useEffect(() => {
+    if (!gameState || gameState.roomPhase !== "ROUND_IN_PROGRESS") return;
+    const currentGuessers = new Set(
+      Object.keys(gameState.allGuesses[gameState.roundCount] ?? {})
+    );
+
+    if (trackedRoundRef.current !== gameState.roundCount) {
+      // New round: start tracking from scratch instead of notifying for
+      // guesses already present in the payload (e.g. right after reconnect).
+      trackedRoundRef.current = gameState.roundCount;
+      seenGuessersRef.current = currentGuessers;
+      return;
+    }
+
+    for (const guesser of currentGuessers) {
+      if (guesser !== username && !seenGuessersRef.current.has(guesser)) {
+        setGuessNotification(`${guesser} has guessed!`);
+      }
+    }
+    seenGuessersRef.current = currentGuessers;
+  }, [gameState, username]);
+
+  useEffect(() => {
+    if (!gameState) return;
+    const currentInactive = new Set(gameState.inactivePlayers ?? []);
+
+    if (!inactiveInitializedRef.current) {
+      inactiveInitializedRef.current = true;
+      seenInactiveRef.current = currentInactive;
+      return;
+    }
+
+    for (const player of currentInactive) {
+      if (player !== username && !seenInactiveRef.current.has(player)) {
+        setForfeitNotification(`${player} has forfeited`);
+      }
+    }
+    seenInactiveRef.current = currentInactive;
+  }, [gameState, username]);
+
+  useEffect(() => {
+    if (amForfeited) {
+      router.push("/game");
+    }
+  }, [amForfeited, router]);
 
   const startRound = () => {
     setGuessLocation(undefined);
@@ -114,6 +191,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const onMapClick = (pos: Coords) => {
     if (roundFinished) return;
     setGuessLocation(pos);
+    movePin(pos);
   };
 
   const onGuess = () => {
@@ -122,9 +200,33 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
     setRoundFinished(true);
   };
 
-  const start = () => {
-    startGame();
-  };
+  useEffect(() => {
+    // Auto-submit whatever pin is already placed right at the deadline, rather than losing it to
+    // the server's own timeout resolution. Scheduled directly off roundEndsAt (not off the
+    // display-only secondsLeft tick from useCountdown, which only updates once a second and isn't
+    // phase-aligned to the deadline) — waiting for that tick can fire up to ~1s late, which is
+    // enough for the server's RoundTimeoutScheduler (also polling every second) to have already
+    // resolved the round as a timeout before our late guess arrives.
+    const roundEndsAt =
+      gameState?.roomPhase === "ROUND_IN_PROGRESS" ? gameState.roundEndsAt : undefined;
+    if (!roundEndsAt) return;
+
+    // Correct for the local clock's skew relative to the server's (see use-countdown.ts) — without
+    // this, a client whose clock runs ahead would fire this early relative to the actual server
+    // deadline, submitting (and ending the round for that player) before their own countdown UI,
+    // and the other player's, reach zero.
+    const msRemaining = roundEndsAt - (Date.now() + clockOffset);
+    const timeout = setTimeout(() => {
+      if (roundFinishedRef.current || !guessLocationRef.current) return;
+      submitGuess(guessLocationRef.current);
+      setRoundFinished(true);
+    }, Math.max(0, msRemaining));
+    return () => clearTimeout(timeout);
+    // Only re-schedule when the deadline or clock-offset estimate changes — the timeout body reads
+    // the refs above instead of closing over state, so it doesn't need
+    // onGuess/roundFinished/guessLocation here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState?.roundEndsAt, gameState?.roomPhase, clockOffset]);
 
   const copyWithFallback = (text: string): boolean => {
     const textarea = document.createElement("textarea");
@@ -157,10 +259,6 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
     } else {
       setCopyError(true);
     }
-  };
-
-  const next = () => {
-    nextRound();
   };
 
   let content: React.ReactNode;
@@ -214,14 +312,20 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       content = (
         <PostgameView
           username={username}
+          players={gameState.players}
           allGuesses={gameState.allGuesses}
           allTargets={gameState.allTargets}
+          allScores={gameState.allScores}
+          allDistances={gameState.allDistances}
+          backHref={buildGameMenuHref(gameSettings)}
         />
       );
     } else if (gameState.roomPhase == "WAITING") {
       phaseKey = "waiting";
       const playerCount = gameState.players?.length ?? 0;
-      const notEnoughPlayers = playerCount < MIN_PLAYERS_TO_START;
+      const connectedCount = playerCount - (gameState.disconnectedPlayers?.length ?? 0);
+      const readyCount = gameState.readyPlayers?.length ?? 0;
+      const notEnoughPlayers = connectedCount < MIN_PLAYERS_TO_START;
 
       content = (
         <Box
@@ -271,13 +375,38 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
               Players ({playerCount})
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {gameState.players?.map((player) => (
-                <Chip
-                  key={player}
-                  label={player === username ? `${player} (you)` : player}
-                  color={player === username ? "primary" : "default"}
-                />
-              ))}
+              {gameState.players?.map((player) => {
+                const forfeited = gameState.inactivePlayers?.includes(player);
+                const disconnected = gameState.disconnectedPlayers?.includes(player);
+                const ready = gameState.readyPlayers?.includes(player);
+                return (
+                  <Chip
+                    key={player}
+                    label={
+                      (player === username ? `${player} (you)` : player) +
+                      (forfeited
+                        ? " – forfeited"
+                        : disconnected
+                          ? " – disconnected"
+                          : ready
+                            ? " – ready"
+                            : "")
+                    }
+                    color={
+                      forfeited
+                        ? "error"
+                        : disconnected
+                          ? "default"
+                          : ready
+                            ? "success"
+                            : player === username
+                              ? "primary"
+                              : "default"
+                    }
+                    sx={forfeited || disconnected ? { opacity: 0.5 } : undefined}
+                  />
+                );
+              })}
             </Stack>
           </Paper>
           <Stack direction="row" spacing={2} alignItems="center">
@@ -290,18 +419,24 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
               Back
             </Button>
             <Button
-              onClick={() => start()}
-              variant="contained"
+              onClick={() => setReady(!amReady)}
+              variant={amReady ? "outlined" : "contained"}
               size="large"
               disabled={notEnoughPlayers}
             >
-              Start Game
+              {amReady ? `Not ready (${readyCount}/${connectedCount})` : "Ready"}
             </Button>
           </Stack>
-          {notEnoughPlayers && (
+          {notEnoughPlayers ? (
             <Typography variant="body2" color="text.secondary">
               Need at least {MIN_PLAYERS_TO_START} players to start
             </Typography>
+          ) : (
+            readySecondsLeft !== undefined && (
+              <Typography variant="body2" color="text.secondary">
+                Auto-starting in {readySecondsLeft}s if not everyone is ready
+              </Typography>
+            )
           )}
         </Box>
       );
@@ -326,11 +461,13 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
             guessingDisabled={!guessLocation || roundFinished}
             onMapClick={onMapClick}
             onGuess={onGuess}
+            onForfeit={forfeit}
             moveEnabled={gameSettings.allowMove}
             panEnabled={gameSettings.allowPan}
             zoomEnabled={gameSettings.allowZoom}
             round={gameState.roundCount + 1}
             totalRounds={gameSettings.roundCount}
+            secondsLeft={secondsLeft}
           />
           {roundFinished && (
             <Chip
@@ -354,18 +491,31 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
       const otherGuesses = Object.entries(
         gameState.allGuesses[gameState.roundCount]
       )
-        .filter(([_username]) => _username !== username)
+        .filter(([_username, guess]) => _username !== username && guess != null)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         .map(([_, guess]) => guess);
 
-      const distance = userGuess
-        ? getDistanceInKm(userGuess, gameState.allTargets[gameState.roundCount])
-        : -1;
-      const score = userGuess ? getGuessrScore(distance, 10_000) : 0;
+      const distance = gameState.allDistances[gameState.roundCount]?.[username] ?? -1;
+      const score = gameState.allScores[gameState.roundCount]?.[username] ?? 0;
       const center = userGuess
         ? getCenterCoords(userGuess, gameState.allTargets[gameState.roundCount])
         : { lat: 0, lng: 0 };
       const zoom = 1 + (score / 5000) * 8;
+
+      const roundStandings = (gameState.players ?? [])
+        .map((player) => ({
+          player,
+          score: gameState.allScores[gameState.roundCount]?.[player] ?? 0,
+          // Cumulative across every round played so far (including this one), not just this round.
+          totalScore: gameState.allScores
+            .slice(0, gameState.roundCount + 1)
+            .reduce((sum, roundScores) => sum + (roundScores?.[player] ?? 0), 0),
+        }))
+        .sort((a, b) => b.score - a.score);
+
+      const resultsConnectedCount =
+        (gameState.players?.length ?? 0) - (gameState.disconnectedPlayers?.length ?? 0);
+      const resultsReadyCount = gameState.readyPlayers?.length ?? 0;
 
       content = (
         <RoundResultView
@@ -376,8 +526,16 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
           otherGuessLocations={otherGuesses}
           center={center}
           zoom={zoom}
-          onNext={next}
-          isFinalRound={gameState.roundCount >= gameSettings.roundCount}
+          onNext={() => setReady(!amReady)}
+          username={username}
+          standings={roundStandings}
+          isFinalRound={gameState.roundCount >= gameSettings.roundCount - 1}
+          readyState={{
+            amReady,
+            readyCount: resultsReadyCount,
+            totalCount: resultsConnectedCount,
+          }}
+          readySecondsLeft={readySecondsLeft}
         />
       );
     } else {
@@ -414,6 +572,31 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
         <Alert severity="error" onClose={() => setCopyError(false)}>
           Couldn&apos;t copy the code. Please copy the Room Code manually.
         </Alert>
+      </Snackbar>
+      <Snackbar
+        open={!!guessNotification}
+        autoHideDuration={3000}
+        onClose={() => setGuessNotification(undefined)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        sx={{ top: { xs: 72, sm: 24 } }}
+      >
+        <Chip
+          label={guessNotification}
+          sx={{ bgcolor: "rgba(0,0,0,0.6)", color: "#fff", fontWeight: 500 }}
+        />
+      </Snackbar>
+      <Snackbar
+        open={!!forfeitNotification}
+        autoHideDuration={3000}
+        onClose={() => setForfeitNotification(undefined)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        sx={{ top: { xs: 72, sm: 24 } }}
+      >
+        <Chip
+          label={forfeitNotification}
+          color="error"
+          sx={{ fontWeight: 500 }}
+        />
       </Snackbar>
     </Box>
   );

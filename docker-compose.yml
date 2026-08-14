@@ -17,7 +17,7 @@ services:
       retries: 10
 
   backend:
-    image: ghcr.io/${IMAGE_NAME:-peterriek/geoguessr-clone}-backend:latest
+    image: ghcr.io/${IMAGE_NAME:-peterriek/geo}-backend:latest
     pull_policy: always
     restart: unless-stopped
     depends_on:
@@ -28,6 +28,10 @@ services:
       JDBC_DATABASE_USERNAME: ${POSTGRES_USER:-postgres}
       JDBC_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+    volumes:
+      - backend-uploads:/app/uploads
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     healthcheck:
@@ -42,7 +46,7 @@ services:
     # Actions workflow (see .github/workflows/deploy.yml), not here — changing
     # them means updating the "prd" environment's variables/secrets in GitHub
     # and pushing, not editing this file or the deploy-host .env.
-    image: ghcr.io/${IMAGE_NAME:-peterriek/geoguessr-clone}-web:latest
+    image: ghcr.io/${IMAGE_NAME:-peterriek/geo}-web:latest
     pull_policy: always
     restart: unless-stopped
     depends_on:
@@ -56,3 +60,4 @@ services:
 
 volumes:
   postgres-data:
+  backend-uploads:

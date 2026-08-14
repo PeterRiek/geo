@@ -11,6 +11,8 @@ JWT_TOKEN = sys.argv[1]
 WS_URL = f"ws://localhost:8080/ws/duel?token={JWT_TOKEN}"
 ROOM_ID = "Room_X"
 
+
+
 messages = [
     "wait",
     "exit",

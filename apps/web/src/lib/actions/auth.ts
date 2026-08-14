@@ -6,6 +6,6 @@ export const login = async (provider: "google") => {
   await signIn(provider, { redirectTo: "/" });
 };
 
-export const logout = async () => {
-  await signOut({ redirectTo: "/" });
+export const logout = async (redirectTo: string = "/") => {
+  await signOut({ redirectTo });
 };

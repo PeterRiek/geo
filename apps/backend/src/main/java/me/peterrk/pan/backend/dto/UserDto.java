@@ -10,6 +10,7 @@ public class UserDto {
   private String username;
   private boolean enabled;
   private Set<String> roles;
+  private Set<String> permissions;
 
   public UserDto(User user) {
     this.id = user.getId();
@@ -18,6 +19,11 @@ public class UserDto {
     this.roles = user.getRoles()
         .stream()
         .map(role -> role.getName())
+        .collect(Collectors.toSet());
+    this.permissions = user.getRoles()
+        .stream()
+        .flatMap(role -> role.getPermissions().stream())
+        .map(permission -> permission.getName())
         .collect(Collectors.toSet());
   }
 
@@ -35,5 +41,9 @@ public class UserDto {
 
   public Set<String> getRoles() {
     return roles;
+  }
+
+  public Set<String> getPermissions() {
+    return permissions;
   }
 }

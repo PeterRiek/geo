@@ -1,17 +1,16 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Container, Paper } from "@mui/material";
-import MapSelect from "./MapSelect";
+import { Alert, Box, Button, Container, Paper } from "@mui/material";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import SelectedMapSummary from "./SelectedMapSummary";
 import NMPZSelect from "./NMPZSelect";
 
 // eslint-disable-next-line
 const SingleplayerSettings: React.FC<any> = ({
   maps,
   selectedMap,
-  setSelectedMap,
   mapsLoading,
-  scrollPositionRef,
   moveEnabled,
   panEnabled,
   zoomEnabled,
@@ -20,6 +19,11 @@ const SingleplayerSettings: React.FC<any> = ({
   setZoomEnabled,
   roundCount,
   setRoundCount,
+  roundTimeLimitSeconds,
+  setRoundTimeLimitSeconds,
+  onStart,
+  isStarting,
+  startError,
 }) => (
   <Box
     sx={{
@@ -32,6 +36,7 @@ const SingleplayerSettings: React.FC<any> = ({
     }}
   >
     <Container
+      maxWidth="md"
       sx={{
         flex: 1,
         minHeight: 0,
@@ -43,14 +48,8 @@ const SingleplayerSettings: React.FC<any> = ({
         pb: 3,
       }}
     >
-      <Paper sx={{ p: 1, flex: 1, minHeight: 0, display: "flex" }}>
-        <MapSelect
-          maps={maps}
-          selectedMap={selectedMap}
-          setSelectedMap={setSelectedMap}
-          mapsLoading={mapsLoading}
-          scrollPositionRef={scrollPositionRef}
-        />
+      <Paper sx={{ overflow: "hidden" }}>
+        <SelectedMapSummary maps={maps} selectedMap={selectedMap} mapsLoading={mapsLoading} />
       </Paper>
       <Paper sx={{ p: 1 }}>
         <NMPZSelect
@@ -58,26 +57,25 @@ const SingleplayerSettings: React.FC<any> = ({
           panEnabled={panEnabled}
           zoomEnabled={zoomEnabled}
           roundCount={roundCount}
+          roundTimeLimitSeconds={roundTimeLimitSeconds}
           setMoveEnabled={setMoveEnabled}
           setPanEnabled={setPanEnabled}
           setZoomEnabled={setZoomEnabled}
           setRoundCount={setRoundCount}
+          setRoundTimeLimitSeconds={setRoundTimeLimitSeconds}
         />
       </Paper>
+      {startError && <Alert severity="error">{startError}</Alert>}
       <Button
-        href={`/game/play/sp/?mapId=${selectedMap}&allowMove=${moveEnabled}&allowPan=${panEnabled}&allowZoom=${zoomEnabled}&rounds=${roundCount}`}
+        onClick={onStart}
         variant="contained"
         size="large"
         fullWidth
-        disabled={!selectedMap}
+        loading={isStarting}
+        disabled={!selectedMap || isStarting}
+        startIcon={selectedMap ? <PlayArrowIcon /> : undefined}
       >
-        {selectedMap
-          ? `Play ${
-              (maps as { id: number; name: string }[]).find(
-                (m) => m.id === selectedMap
-              )?.name ?? ""
-            }`
-          : "Select a map"}
+        {selectedMap ? "Play" : "Select a map"}
       </Button>
     </Container>
   </Box>
