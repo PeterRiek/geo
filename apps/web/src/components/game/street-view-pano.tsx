@@ -53,6 +53,7 @@ const StreetViewPano: React.FC<StreetViewPanoProps> = ({
             },
             zoom: 1,
             disableDefaultUI: true,
+			linksControl: moveEnabled ?? true,
             showRoadLabels: false,
             clickToGo: moveEnabled ?? true,
             scrollwheel: zoomEnabled ?? true,

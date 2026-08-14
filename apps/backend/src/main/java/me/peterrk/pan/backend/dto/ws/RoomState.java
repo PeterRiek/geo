@@ -34,8 +34,15 @@ public class RoomState {
   // Epoch millis the current round's guess window closes. Sent to clients for
   // the countdown; the server (not the client) is what actually resolves it.
   public Long roundEndsAt;
-  // Usernames that are still room members but have no live socket right now.
+  // Usernames that are still room members but have no live socket right now. Transient — clears on
+  // reconnect via GameService#joinRoom.
   public Set<String> disconnectedPlayers = new HashSet<>();
+  // Usernames that have forfeited. Permanent, unlike disconnectedPlayers: never cleared, and
+  // GameService#joinRoom refuses to let them back in. Excluded from every ready gate (see
+  // GameService#connectedPlayers) and from the guess count a round waits on (see
+  // GameService#advanceIfComplete), but the room is not closed on their account — the game plays
+  // out to its normal end for whoever's still active.
+  public Set<String> inactivePlayers = new HashSet<>();
 
   // Usernames ready for whichever transition is currently gated: starting round 1 (while
   // WAITING) or advancing past the current round's results (while ROUND_RESULTS). Reset fresh

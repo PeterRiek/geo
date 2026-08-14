@@ -4,6 +4,7 @@ import GuessrUI from "@/components/game/guessing-ui";
 import StreetViewPano from "@/components/game/street-view-pano";
 import RoundHud from "@/components/game/round-hud";
 import CountdownOverlay from "@/components/game/countdown-overlay";
+import InGameMenu from "@/components/game/in-game-menu";
 import { Coords } from "@/types/geo";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
   guessingDisabled?: boolean;
   onMapClick: (pos: Coords) => void;
   onGuess: () => void;
+  onForfeit: () => void;
   moveEnabled?: boolean;
   panEnabled?: boolean;
   zoomEnabled?: boolean;
@@ -32,6 +34,7 @@ const InGameView: React.FC<Props> = ({
   guessingDisabled,
   onMapClick,
   onGuess,
+  onForfeit,
   moveEnabled,
   panEnabled,
   zoomEnabled,
@@ -58,6 +61,7 @@ const InGameView: React.FC<Props> = ({
           panEnabled={panEnabled}
           zoomEnabled={zoomEnabled}
         />
+        <InGameMenu onForfeit={onForfeit} />
       </Box>
       {isMobile ? (
         <GuessrMobileUI

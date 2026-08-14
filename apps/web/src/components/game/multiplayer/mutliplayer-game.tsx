@@ -44,7 +44,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
   const roomId = useMemo(() => searchParams.get("roomId"), [searchParams]);
   // load searchparam.roomId into useMultiplaerSocker
 
-  const { gameState, connectionStatus, join, setReady, submitGuess, movePin, reconnect, clockOffset } =
+  const { gameState, connectionStatus, join, setReady, submitGuess, movePin, reconnect, clockOffset, forfeit } =
     useGameSocket(roomId ?? "default", accessToken);
 
   const secondsLeft = useCountdown(
@@ -423,6 +423,7 @@ const MultiplayerGame: React.FC<{ accessToken: string; username: string }> = ({
             guessingDisabled={!guessLocation || roundFinished}
             onMapClick={onMapClick}
             onGuess={onGuess}
+            onForfeit={forfeit}
             moveEnabled={gameSettings.allowMove}
             panEnabled={gameSettings.allowPan}
             zoomEnabled={gameSettings.allowZoom}

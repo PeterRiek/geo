@@ -161,6 +161,10 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     send({ type: "NEXT_ROUND", roomId });
   };
 
+  const forfeit = () => {
+    send({ type: "FORFEIT", roomId });
+  };
+
   const submitGuess = (guess: Coords) => {
     send({ type: "GUESS", roomId, payload: guess });
   };
@@ -187,6 +191,7 @@ const useGameSocket = (roomId?: string, accessToken?: string) => {
     submitGuess,
     movePin,
     reconnect,
+    forfeit,
   };
 };
 
