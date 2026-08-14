@@ -60,6 +60,11 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
       }
 
       case "JOIN" -> {
+        RoomState existingRoom = gameService.getRoomState(msg.roomId);
+        if (existingRoom != null && existingRoom.inactivePlayers.contains(username)) {
+          session.sendMessage(new TextMessage(mapper.writeValueAsBytes(new ServerMessage("FORFEITED"))));
+          return;
+        }
         RoomState roomState = gameService.joinRoom(msg.roomId, username, session);
         if (roomState == null) {
           ServerMessage response = new ServerMessage("ROOM_NOT_FOUND");
@@ -77,9 +82,6 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
       }
 
-      // Fire-and-forget: tracks where the player's pin currently sits before they submit, purely so
-      // a round timeout can fall back to it (see GameService#resolveExpiredRounds). Not acknowledged
-      // and never broadcast — unlike GUESS it doesn't change any state clients need to see.
       case "PIN_MOVED" -> {
         LatLng pos = mapper.convertValue(msg.payload, LatLng.class);
         gameService.updatePendingGuess(msg.roomId, username, pos);
@@ -94,6 +96,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
       case "NEXT_ROUND" -> {
         if (!gameService.nextRound(msg.roomId)) {
+          session.sendMessage(new TextMessage(mapper.writeValueAsBytes(new ServerMessage("INVALID_OPERATION"))));
+        }
+      }
+
+      case "FORFEIT" -> {
+        if (!gameService.forfeit(msg.roomId, username)) {
           session.sendMessage(new TextMessage(mapper.writeValueAsBytes(new ServerMessage("INVALID_OPERATION"))));
         }
       }

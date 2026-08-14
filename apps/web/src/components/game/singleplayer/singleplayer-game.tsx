@@ -31,6 +31,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
     reconnect,
     roomError,
     clockOffset,
+    forfeit,
   } = useGameSocket(sessionId, accessToken);
 
   const theme = useTheme();
@@ -182,6 +183,7 @@ const SinglePlayerGame: React.FC<{ accessToken: string; username: string }> = ({
           roundFinished={roundFinished}
           onMapClick={onMapClick}
           onGuess={onGuess}
+          onForfeit={forfeit}
           moveEnabled={gameSettings.allowMove}
           panEnabled={gameSettings.allowPan}
           zoomEnabled={gameSettings.allowZoom}

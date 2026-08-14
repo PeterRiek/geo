@@ -107,7 +107,7 @@ public class GameService {
 
   public RoomState joinRoom(String roomId, String username, WebSocketSession session) {
     RoomState room = rooms.get(roomId);
-    if (room == null) {
+    if (room == null || room.inactivePlayers.contains(username)) {
       return null;
     }
     roomSessions.computeIfAbsent(roomId, id -> ConcurrentHashMap.newKeySet()).add(session);
@@ -277,7 +277,9 @@ public class GameService {
    */
   private void advanceIfComplete(RoomState room) {
     Map<String, LatLng> currentGuesses = currentRoundGuesses(room);
-    if (currentGuesses.size() < room.players.size()) {
+    // Forfeited players never submit again, so a round only waits on whoever's still active —
+    // otherwise a forfeit mid-round would stall it until the timeout scheduler bails it out.
+    if (currentGuesses.size() < activePlayers(room).size()) {
       broadcast(room.roomId, new ServerMessage("GUESS_SUBMITTED", room));
       return;
     }
@@ -363,9 +365,16 @@ public class GameService {
   }
 
   private Set<String> connectedPlayers(RoomState room) {
-    Set<String> connected = new HashSet<>(room.players);
+    Set<String> connected = activePlayers(room);
     connected.removeAll(room.disconnectedPlayers);
     return connected;
+  }
+
+  /** Room members minus anyone who's forfeited — still includes players who are merely disconnected. */
+  private Set<String> activePlayers(RoomState room) {
+    Set<String> active = new HashSet<>(room.players);
+    active.removeAll(room.inactivePlayers);
+    return active;
   }
 
   /**
@@ -475,7 +484,7 @@ public class GameService {
   /** Used to power the "you have a game in progress" reconnect banner. */
   public RoomState findActiveRoomForUser(String username) {
     for (RoomState room : rooms.values()) {
-      if (room.players != null && room.players.contains(username)) {
+      if (room.players != null && room.players.contains(username) && !room.inactivePlayers.contains(username)) {
         return room;
       }
     }
@@ -497,6 +506,55 @@ public class GameService {
         }
       }
     }
+  }
+
+  /**
+   * Marks the caller inactive rather than ending the room: every ready gate stops waiting on them
+   * (see #connectedPlayers), a round in progress stops waiting on their guess (see
+   * #advanceIfComplete), and #joinRoom refuses to let them back in — but the game plays out to its
+   * normal end for whoever's still active, same as it would for any other round they simply never
+   * guess in. The lone exception is when this forfeit empties the room of active players: with no
+   * one left to play for, the room ends immediately instead of idling out the results gate.
+   * Returns false if the room doesn't exist, has already finished, the caller isn't a player in it,
+   * or they've already forfeited.
+   */
+  public boolean forfeit(String roomId, String username) {
+    RoomState room = rooms.get(roomId);
+    if (room == null) {
+      return false;
+    }
+    RoomState.RoomPhase newPhase = null;
+    boolean wasInProgress;
+    synchronized (room) {
+      if (room.roomPhase == RoomState.RoomPhase.GAME_RESULTS || !room.players.contains(username)
+          || room.inactivePlayers.contains(username)) {
+        return false;
+      }
+      room.inactivePlayers.add(username);
+      room.readyPlayers.remove(username);
+
+      if (activePlayers(room).isEmpty()) {
+        finishGame(room);
+        return true;
+      }
+
+      wasInProgress = room.roomPhase == RoomState.RoomPhase.ROUND_IN_PROGRESS;
+      if (wasInProgress) {
+        // Broadcasts internally (GUESS_SUBMITTED or ROUND_RESULTS) regardless of outcome.
+        advanceIfComplete(room);
+      } else {
+        newPhase = maybeAdvance(room);
+      }
+    }
+    if (!wasInProgress) {
+      if (newPhase == RoomState.RoomPhase.ROUND_IN_PROGRESS) {
+        broadcast(roomId, new ServerMessage("ROUND_STARTED", room));
+      } else if (newPhase == null) {
+        // Didn't advance — let clients refresh their player-status view (mirrors setReady).
+        broadcast(roomId, new ServerMessage("PLAYER_STATUS", room));
+      }
+    }
+    return true;
   }
 
   public LatLng getRandomTarget(Long mapId) {
