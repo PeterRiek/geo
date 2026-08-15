@@ -7,6 +7,7 @@ import me.peterrk.pan.backend.repository.GameSessionPlayerRepository;
 import me.peterrk.pan.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -28,13 +29,15 @@ public class UserService {
 
   private final UserRepository userRepository;
   private final GameSessionPlayerRepository gameSessionPlayerRepository;
+  private final PasswordEncoder passwordEncoder;
 
   @Value("${app.game.daily-limit:5}")
   private int dailyLimit;
 
-  public UserService(UserRepository userRepository, GameSessionPlayerRepository gameSessionPlayerRepository) {
+  public UserService(UserRepository userRepository, GameSessionPlayerRepository gameSessionPlayerRepository, PasswordEncoder passwordEncoder) {
     this.userRepository = userRepository;
     this.gameSessionPlayerRepository = gameSessionPlayerRepository;
+    this.passwordEncoder = passwordEncoder;
   }
 
   public User getAuthenticatedUser(String username) {
@@ -101,6 +104,20 @@ public class UserService {
       throw new UsernameAlreadyExistsException("Username already exists");
     }
     user.setUsername(trimmed);
+    return userRepository.save(user);
+  }
+
+  public User updatePassword(String username, String currentPassword, String newPassword) {
+    User user = userRepository.findByUsername(username)
+      .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
+      throw new IllegalArgumentException("Current password is incorrect");
+    }
+    if (newPassword == null || newPassword.trim().isEmpty()) {
+      throw new IllegalArgumentException("New password is required");
+    }
+    String encodedPassword = passwordEncoder.encode(newPassword.trim());
+    user.setPassword(encodedPassword);
     return userRepository.save(user);
   }
 }

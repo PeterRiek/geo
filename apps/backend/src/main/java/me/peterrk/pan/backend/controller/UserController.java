@@ -78,4 +78,14 @@ public class UserController {
     User updated = activationKeyService.redeemKey(currentUser, body.code());
     return ResponseEntity.ok(new UserDto(updated));
   }
+
+  public record UpdatePasswordRequest(String currentPassword, String newPassword) {
+  }
+
+  @PatchMapping("/me/password")
+  public ResponseEntity<?> updatePassword(Authentication auth, @RequestBody UpdatePasswordRequest body) {
+    User currentUser = userService.getAuthenticatedUser(auth.getName());
+    User updated = userService.updatePassword(currentUser.getUsername(), body.currentPassword(), body.newPassword());
+    return ResponseEntity.ok(new UserDto(updated));
+  }
 }

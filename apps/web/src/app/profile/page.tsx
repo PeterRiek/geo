@@ -24,6 +24,7 @@ import {
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import EditIcon from "@mui/icons-material/Edit";
+import LockResetIcon from "@mui/icons-material/LockReset";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { logout } from "@/lib/actions/auth";
@@ -67,6 +68,11 @@ const ProfilePage = () => {
   const [keyActivating, setKeyActivating] = useState(false);
   const [keyError, setKeyError] = useState("");
   const [keySuccess, setKeySuccess] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSaved, setPasswordSaved] = useState(false);
 
   const refreshUser = async () => {
     const resMe = await apiFetch("/api/user/me");
@@ -130,6 +136,10 @@ const ProfilePage = () => {
     setUsername(data?.username ?? "");
     setUsernameError("");
     setUsernameSaved(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setPasswordError("");
+    setPasswordSaved(false);
     setEditOpen(true);
   };
 
@@ -161,6 +171,35 @@ const ProfilePage = () => {
       setUsernameError("Failed to update username. Check your connection and try again.");
     } finally {
       setUsernameSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword) return;
+
+    setPasswordSaving(true);
+    setPasswordError("");
+    setPasswordSaved(false);
+    try {
+      const res = await apiFetch("/api/user/me/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const body = await res.json().catch(() => undefined);
+
+      if (!res.ok) {
+        setPasswordError(body?.error ?? "Failed to change password.");
+        return;
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setPasswordSaved(true);
+    } catch {
+      setPasswordError("Failed to change password. Check your connection and try again.");
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -294,6 +333,52 @@ const ProfilePage = () => {
             />
             {usernameError && <Alert severity="error">{usernameError}</Alert>}
             {usernameSaved && <Alert severity="success">Username updated.</Alert>}
+
+            <Divider />
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Change password
+              </Typography>
+              <Stack spacing={2}>
+                <TextField
+                  label="Current password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value);
+                    setPasswordError("");
+                    setPasswordSaved(false);
+                  }}
+                  fullWidth
+                  required
+                />
+                <TextField
+                  label="New password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setPasswordError("");
+                    setPasswordSaved(false);
+                  }}
+                  fullWidth
+                  required
+                />
+                {passwordError && <Alert severity="error">{passwordError}</Alert>}
+                {passwordSaved && <Alert severity="success">Password updated.</Alert>}
+                <Button
+                  onClick={handleChangePassword}
+                  variant="outlined"
+                  startIcon={<LockResetIcon />}
+                  loading={passwordSaving}
+                  disabled={!currentPassword || !newPassword}
+                  fullWidth
+                >
+                  Update Password
+                </Button>
+              </Stack>
+            </Box>
 
             <Divider />
 
