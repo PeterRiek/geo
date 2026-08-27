@@ -15,6 +15,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "${POSTGRES_CPUS:-0.5}"
+          memory: ${POSTGRES_MEMORY:-512M}
 
   backend:
     image: ghcr.io/${IMAGE_NAME:-peterriek/geo}-backend:latest
@@ -40,6 +45,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "${BACKEND_CPUS:-1}"
+          memory: ${BACKEND_MEMORY:-1G}
 
   web:
     # NEXT_PUBLIC_* vars are baked into this image at build time by the GitHub
@@ -57,6 +67,11 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     ports:
       - "${WEB_PORT:-3000}:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "${WEB_CPUS:-0.5}"
+          memory: ${WEB_MEMORY:-512M}
 
 volumes:
   postgres-data:
