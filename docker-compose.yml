@@ -36,6 +36,9 @@ services:
       DAILY_GAME_LIMIT: ${DAILY_GAME_LIMIT:-5}
     volumes:
       - backend-uploads:/app/uploads
+    ports:
+      # needed for websockets
+      - "${BACKEND_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/status || exit 1"]
       interval: 10s
